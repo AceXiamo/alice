@@ -1,15 +1,56 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  
+  --color-gray-background: #F9F9F9;
 }
 
-html,
-body {
-  @apply bg-white dark:bg-gray-950;
+@variant dark (&:is(.dark *));
 
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
+html {
+  @apply bg-white dark:bg-gray-950;
+}
+
+body {
+  @apply bg-transparent;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
   }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  animation: gradient 6s ease infinite;
+}
+
+@keyframes meteor {
+  0% {
+    transform: rotate(var(--angle)) translateX(0);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--angle)) translateX(-500px);
+    opacity: 0;
+  }
+}
+
+.animate-meteor {
+  animation: meteor linear infinite;
 }
