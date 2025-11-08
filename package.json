@@ -9,6 +9,8 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
+    "@google/genai": "^0.11.0",
+    "@iconify-json/svg-spinners": "^1.2.4",
     "@iconify/react": "^6.0.2",
     "@react-router/node": "^7.9.2",
     "@react-router/serve": "^7.9.2",

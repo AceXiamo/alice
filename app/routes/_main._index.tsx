@@ -2,7 +2,8 @@ import { Icon } from '@iconify/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
 import type { Route } from './+types/_main._index'
-import { Meteors } from '../components/meteors'
+import { ParticleSphere } from '../components/ParticleSphere'
+// import { Meteors } from '../components/meteors'
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: 'Alice - Voice AI Assistant' }, { name: 'description', content: 'Voice-first AI chat companion' }]
@@ -56,6 +57,12 @@ export default function HomePage() {
   const [messages, setMessages] = useState<Array<{ id: number; role: 'user' | 'assistant'; content: string }>>([])
   const [inputValue, setInputValue] = useState('')
   const [isListening, setIsListening] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const ttsAudioRef = useRef<HTMLAudioElement>(null)
+  const [audioFileName, setAudioFileName] = useState<string | null>(null)
+  const [audioProgress, setAudioProgress] = useState(0) // 0..1
+  const [audioTimes, setAudioTimes] = useState<{ cur: number; dur: number }>({ cur: 0, dur: 0 })
+  const audioUrlRef = useRef<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<ISpeechRecognition | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -124,7 +131,7 @@ export default function HomePage() {
   }
 
   const handleSend = () => {
-    if (!inputValue.trim()) return
+    if (!inputValue.trim() || isLoading) return
 
     const newMessage = {
       id: Date.now(),
@@ -133,19 +140,84 @@ export default function HomePage() {
     }
     setMessages((prev) => [...prev, newMessage])
     setInputValue('')
+    setIsLoading(true)
 
-    // TODO: 发送到后端，接收 AI 回复
-    // 模拟 AI 回复
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          role: 'assistant',
-          content: '我是 Alice，你的语音 AI 助手。这是一个测试回复。',
-        },
-      ])
-    }, 1000)
+    ;(async () => {
+      try {
+        // Step 1: Get AI response
+        const res = await fetch('/api/genai', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ input: newMessage.content }),
+        })
+        if (!res.ok) throw new Error('api_error')
+        const data = (await res.json()) as { text?: string }
+        const text = data.text || '...'
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            role: 'assistant' as const,
+            content: text,
+          },
+        ])
+
+        // Step 2: Generate TTS audio
+        try {
+          const ttsRes = await fetch('https://lxa43eyg6x78cq-8188.proxy.runpod.net/tts', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ text }),
+          })
+          if (!ttsRes.ok) {
+            console.warn('TTS generation failed:', await ttsRes.text())
+            return
+          }
+          const ttsData = (await ttsRes.json()) as { url?: string; filename?: string }
+          const audioUrl = ttsData.url
+          if (!audioUrl) {
+            console.warn('No audio URL returned from TTS service')
+            return
+          }
+
+          // Step 3: Use proxy URL to avoid CORS issues
+          const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(audioUrl)}`
+
+          if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current)
+          audioUrlRef.current = proxyUrl
+          setAudioFileName(ttsData.filename || 'alice-response.wav')
+          setAudioProgress(0)
+          setAudioTimes({ cur: 0, dur: 0 })
+
+          const audioEl = ttsAudioRef.current
+          if (audioEl) {
+            audioEl.src = proxyUrl
+            audioEl.muted = false
+            audioEl.volume = 1
+            try {
+              await audioEl.play()
+              console.log('Playing TTS audio via proxy:', proxyUrl)
+            } catch (err) {
+              console.warn('Audio playback failed:', err)
+            }
+          }
+        } catch (ttsError) {
+          console.warn('TTS service error:', ttsError)
+        }
+      } catch (e) {
+        // fallback: 简单回声，便于在无后端时预览
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            role: 'assistant' as const,
+            content: '（本地回显）' + newMessage.content,
+          },
+        ])
+      } finally {
+        setIsLoading(false)
+      }
+    })()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -155,123 +227,104 @@ export default function HomePage() {
     }
   }
 
+  // Audio upload + progress handling
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const handlePickAudio = () => fileInputRef.current?.click()
+  const handleAudioFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const type = file.type
+    if (!type.startsWith('audio/') && !/\.(mp3|wav|m4a)$/i.test(file.name)) {
+      alert('请选择音频文件（mp3 / wav / m4a）')
+      return
+    }
+    const url = URL.createObjectURL(file)
+    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current)
+    audioUrlRef.current = url
+    setAudioFileName(file.name)
+    setAudioProgress(0)
+    setAudioTimes({ cur: 0, dur: 0 })
+    const el = ttsAudioRef.current
+    if (el) {
+      el.src = url
+      el.muted = false
+      el.volume = 1
+      try {
+        await el.play()
+      } catch (err) {
+        console.warn('Audio play failed:', err)
+      }
+    }
+  }
+
+  const formatTime = (t: number) => {
+    if (!isFinite(t) || t < 0) return '00:00'
+    const m = Math.floor(t / 60)
+    const s = Math.floor(t % 60)
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  }
+
+  useEffect(() => {
+    const el = ttsAudioRef.current
+    if (!el) return
+    const onTime = () => {
+      const dur = el.duration || 0
+      const cur = el.currentTime || 0
+      setAudioTimes({ cur, dur })
+      setAudioProgress(dur > 0 ? Math.min(1, cur / dur) : 0)
+    }
+    const onLoaded = () => onTime()
+    const onEnded = () => {
+      onTime()
+    }
+    el.addEventListener('timeupdate', onTime)
+    el.addEventListener('loadedmetadata', onLoaded)
+    el.addEventListener('ended', onEnded)
+    return () => {
+      el.removeEventListener('timeupdate', onTime)
+      el.removeEventListener('loadedmetadata', onLoaded)
+      el.removeEventListener('ended', onEnded)
+    }
+  }, [])
+
   return (
     <div className="h-full relative bg-gray-100 dark:bg-gray-900 overflow-hidden">
-      {/* Meteors 背景 */}
-      {/* <Meteors number={30} /> */}
-
-      {/* 对话消息区域 - 占据整个空间 */}
-      <div className="absolute inset-0 overflow-y-auto px-6 py-8 pb-32">
-        <AnimatePresence mode="wait">
-          {messages.length === 0 ? (
-            <motion.div
-              key="welcome"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="h-full flex flex-col items-center justify-center text-center px-4"
-            >
-              {/* Logo 图标 */}
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{
-                  delay: 0.1,
-                  type: 'spring',
-                  stiffness: 200,
-                  damping: 20,
-                }}
-                className="mb-6"
-              >
-                <div className="text-7xl">✨</div>
-              </motion.div>
-
-              {/* 标题 - Typing Animation */}
-              <motion.h2 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="text-5xl font-bold mb-3">
-                <TypingAnimation text="Good to see you!" className="animate-gradient bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-size-[300%_100%] bg-clip-text text-transparent" />
-              </motion.h2>
-
-              {/* 副标题 */}
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.5 }}
-                className="text-base text-gray-500 dark:text-gray-500 max-w-md leading-relaxed mb-12"
-              >
-                Alice your personal and expert AI assistant for pretty much any tasks you can imagine.
-              </motion.p>
-
-              {/* 快捷对话建议 - 融入式设计 */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="flex flex-wrap items-center justify-center gap-3 max-w-2xl">
-                {[
-                  { icon: 'solar:chat-round-dots-bold', label: "Let's chat", iconColor: 'text-blue-500' },
-                  { icon: 'solar:book-2-bold', label: 'Tell me a story', iconColor: 'text-purple-500' },
-                  { icon: 'solar:calendar-mark-bold', label: "What's your plan today?", iconColor: 'text-green-500' },
-                ].map((item, index) => (
-                  <motion.button
-                    key={item.label}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 + index * 0.08 }}
-                    whileHover={{ y: -2, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setInputValue(item.label)}
-                    className="group relative flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-white/40 dark:bg-gray-800/40 hover:bg-white/80 dark:hover:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:border-gray-300/80 dark:hover:border-gray-600/80 transition-all shadow-sm hover:shadow"
-                  >
-                    <Icon icon={item.icon} className={`w-5 h-5 ${item.iconColor}`} />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">{item.label}</span>
-                  </motion.button>
-                ))}
-              </motion.div>
-            </motion.div>
-          ) : (
-            <motion.div key="messages" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto space-y-6">
-              {messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{
-                    duration: 0.3,
-                    ease: [0.4, 0, 0.2, 1],
-                  }}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[75%] rounded-2xl px-5 py-3.5 ${
-                      message.role === 'user' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
-                    }`}
-                  >
-                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                  </div>
-                </motion.div>
-              ))}
-              <div ref={messagesEndRef} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* 主显示：粒子球（3D 大圆球），全屏覆盖；音波由 TTS 音频驱动 */}
+      <div className="absolute inset-0">
+        <ParticleSphere className="absolute inset-0 pointer-events-none" audioRef={ttsAudioRef} />
+        <audio ref={ttsAudioRef} className="hidden" />
       </div>
 
-      {/* 底部输入区域 - 悬浮 */}
+      {/* 底部输入区域 - 保持原位置（悬浮） */}
       <div className="absolute bottom-20 left-0 right-0 px-6 pb-6 pt-4 pointer-events-none">
         <div className="max-w-4xl mx-auto pointer-events-auto">
-          {/* 输入框容器 */}
           <div className="relative bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-md focus-within:shadow-xl transition-all">
-            {/* 输入框 */}
             <textarea
               ref={textareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="How can I help you today?"
-              className="w-full bg-transparent px-4 pt-4 pb-16 text-[15px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none max-h-[200px] leading-relaxed overflow-hidden"
+              className="w-full bg-transparent px-4 pt-4 pb-20 text-[15px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none max-h-[200px] leading-relaxed overflow-hidden"
               rows={1}
               style={{ minHeight: '72px' }}
             />
-
-            {/* 底部按钮行 */}
+            {/* 音频进度条 */}
+            {/* {audioFileName && (
+              <div className="absolute left-3 right-3 bottom-14">
+                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <span className="truncate max-w-[60%]" title={audioFileName}>{audioFileName}</span>
+                  <span className="ml-auto tabular-nums">{formatTime(audioTimes.cur)} / {formatTime(audioTimes.dur)}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                  <div
+                    className="h-full bg-linear-to-r from-blue-500 via-violet-500 to-pink-500"
+                    style={{ width: `${Math.round(audioProgress * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )} */}
             <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-              {/* 左侧工具按钮 */}
               <div className="flex items-center gap-1">
                 <button
                   type="button"
@@ -287,16 +340,23 @@ export default function HomePage() {
                 >
                   <Icon icon="solar:gallery-add-bold" className="w-5 h-5" />
                 </button>
+                {/* 上传音频文件 */}
                 <button
                   type="button"
+                  onClick={handlePickAudio}
                   className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
-                  title="搜索"
+                  title="上传音频（mp3 / wav / m4a）"
                 >
-                  <Icon icon="solar:minimalistic-magnifer-bold" className="w-5 h-5" />
+                  <Icon icon="solar:music-note-2-bold" className="w-5 h-5" />
                 </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/mpeg, audio/mp3, audio/wav, audio/x-wav, audio/wave, audio/mp4, audio/x-m4a, .m4a"
+                  onChange={handleAudioFileChange}
+                  className="hidden"
+                />
               </div>
-
-              {/* 右侧操作按钮 */}
               <div className="flex items-center gap-1">
                 <motion.button
                   type="button"
@@ -310,16 +370,16 @@ export default function HomePage() {
                   animate={isListening ? { scale: [1, 1.1, 1] } : {}}
                   transition={{ repeat: Infinity, duration: 1.5 }}
                 >
-                  <Icon icon={isListening ? 'solar:microphone-bold' : 'solar:microphone-bold'} className="w-5 h-5" />
+                  <Icon icon="solar:microphone-bold" className="w-5 h-5" />
                 </motion.button>
                 <button
                   type="button"
                   onClick={handleSend}
-                  disabled={!inputValue.trim()}
+                  disabled={!inputValue.trim() || isLoading}
                   className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 transition-all"
-                  title="发送消息"
+                  title={isLoading ? '加载中...' : '发送消息'}
                 >
-                  <Icon icon="solar:alt-arrow-up-bold" className="w-5 h-5" />
+                  <Icon icon={isLoading ? 'svg-spinners:3-dots-fade' : 'solar:alt-arrow-up-bold'} className="w-5 h-5" />
                 </button>
               </div>
             </div>
