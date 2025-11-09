@@ -1,0 +1,39 @@
+// Prisma Schema for Alice AI Chat
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 会话模型 - 一个标签页/用户一个会话
+model Session {
+  id        String   @id // 使用客户端 sessionId 作为主键
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+
+  @@map("sessions")
+}
+
+// 消息模型 - 存储对话记录
+model Message {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String   // "user" | "assistant"
+  content   String   @db.Text
+  duration  Float?   // API 调用耗时（仅 assistant 消息有）
+  audioUrl  String?  // TTS 音频 URL（仅 assistant 消息有）
+  createdAt DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("messages")
+}

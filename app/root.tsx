@@ -19,7 +19,7 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Dancing+Script:wght@400..700&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playwrite+HU:wght@100..400&display=swap",
   },
 ];
 
@@ -31,6 +31,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        <link rel="icon" type="image/png" href="/logo.png" />
+        <script defer src="https://axm-umami.zeabur.app/script.js" data-website-id="6ff155eb-e896-4531-901c-dae4a0d059ef"></script>
       </head>
       <body>
         {children}

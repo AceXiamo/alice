@@ -20,7 +20,7 @@ export async function loader({ request }: Route.LoaderFunctionArgs) {
     try {
       const parsedUrl = new URL(audioUrl)
       // Only allow specific domains for security
-      const allowedDomains = ['axm-dev.acexiamo.com', '70uoabtdcq08ye-7865.proxy.runpod.net']
+      const allowedDomains = ['axm-dev.acexiamo.com', '70uoabtdcq08ye-7865.proxy.runpod.net', 'fii0brhpejciqj-8188.proxy.runpod.net']
       if (!allowedDomains.some(domain => parsedUrl.hostname === domain)) {
         return new Response('Invalid audio URL domain', { status: 403 })
       }
