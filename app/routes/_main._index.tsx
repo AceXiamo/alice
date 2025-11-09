@@ -41,6 +41,7 @@ export default function HomePage() {
   const [isListening, setIsListening] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [loadingDuration, setLoadingDuration] = useState<number>(0)
+  const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false)
   const ttsAudioRef = useRef<HTMLAudioElement>(null)
   const [audioFileName, setAudioFileName] = useState<string | null>(null)
   const [audioProgress, setAudioProgress] = useState(0) // 0..1
@@ -51,33 +52,48 @@ export default function HomePage() {
 
   useEffect(() => {
     // 初始化语音识别
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
-      const recognition = new SpeechRecognition()
-      recognition.continuous = false
-      recognition.interimResults = false
-      recognition.lang = 'zh-CN'
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      try {
+        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+        const recognition = new SpeechRecognition()
+        recognition.continuous = false
+        recognition.interimResults = false
+        recognition.lang = 'zh-CN'
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = event.results[0][0].transcript
-        setInputValue(transcript)
-        setIsListening(false)
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
+          const transcript = event.results[0][0].transcript
+          setInputValue(transcript)
+          setIsListening(false)
+        }
+
+        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+          console.error('Speech recognition error:', event.error)
+          setIsListening(false)
+        }
+
+        recognition.onend = () => {
+          setIsListening(false)
+        }
+
+        recognitionRef.current = recognition
+        setIsSpeechRecognitionSupported(true)
+        console.log('Speech recognition initialized successfully')
+      } catch (error) {
+        console.error('Failed to initialize speech recognition:', error)
+        setIsSpeechRecognitionSupported(false)
       }
-
-      recognition.onerror = () => {
-        setIsListening(false)
-      }
-
-      recognition.onend = () => {
-        setIsListening(false)
-      }
-
-      recognitionRef.current = recognition
+    } else {
+      console.warn('Speech recognition not supported in this browser')
+      setIsSpeechRecognitionSupported(false)
     }
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop()
+        try {
+          recognitionRef.current.stop()
+        } catch (error) {
+          // Ignore errors on cleanup
+        }
       }
     }
   }, [])
@@ -92,14 +108,23 @@ export default function HomePage() {
 
   const handleStartListening = () => {
     if (recognitionRef.current && !isListening) {
-      setIsListening(true)
-      recognitionRef.current.start()
+      try {
+        recognitionRef.current.start()
+        setIsListening(true)
+      } catch (error) {
+        console.error('Failed to start speech recognition:', error)
+        setIsListening(false)
+      }
     }
   }
 
   const handleStopListening = () => {
     if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop()
+      try {
+        recognitionRef.current.stop()
+      } catch (error) {
+        console.error('Failed to stop speech recognition:', error)
+      }
       setIsListening(false)
     }
   }
@@ -408,14 +433,20 @@ export default function HomePage() {
               <div className="flex items-center gap-1">
                 <motion.button
                   type="button"
-                  disabled={true}
+                  disabled={isLoading || !isSpeechRecognitionSupported}
                   onClick={isListening ? handleStopListening : handleStartListening}
                   className={`p-2.5 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors ${
                     isListening
                       ? 'text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-900/20'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
-                  title={isListening ? '停止录音' : '语音输入'}
+                  title={
+                    !isSpeechRecognitionSupported
+                      ? '浏览器不支持语音识别'
+                      : isListening
+                      ? '停止录音'
+                      : '语音输入'
+                  }
                   animate={isListening ? { scale: [1, 1.1, 1] } : {}}
                   transition={{ repeat: Infinity, duration: 1.5 }}
                 >
