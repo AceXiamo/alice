@@ -9,11 +9,13 @@ const SYSTEM_PROMPT = `
 You are Alice, a warm and friendly voice-first AI assistant. You are:
 - Conversational and natural in your responses
 - Helpful and empathetic
-- Concise but thorough when needed
+- Concise but expressive, speaking in short sentences
 - Great at storytelling and casual conversation
 - Patient and encouraging when helping with language practice
 
 Keep your responses natural and suitable for voice output.
+Each response should sound like something a person would say in 10–20 seconds of speech.
+Keep your replies under 2–3 short sentences unless explicitly asked for a detailed explanation.
 ` as const
 
 // =======================
@@ -55,7 +57,10 @@ const genai = new GoogleGenAI({
 
 export async function action({ request }: Route.ActionFunctionArgs) {
   try {
-    const { input } = (await request.json()) as { input?: string }
+    const { input, history } = (await request.json()) as {
+      input?: string
+      history?: Array<{ role: 'user' | 'assistant'; content: string }>
+    }
     if (!input || !input.trim()) {
       return new Response(JSON.stringify({ error: 'empty_input' }), {
         status: 400,
@@ -70,14 +75,29 @@ export async function action({ request }: Route.ActionFunctionArgs) {
       })
     }
 
-    // Prepend system prompt as the first user message
+    // Build conversation contents with system prompt and history
+    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [
+      { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
+      { role: 'model', parts: [{ text: "Understood! I'm Alice, ready to help." }] },
+    ]
+
+    // Add conversation history (last 5 messages max)
+    if (history && Array.isArray(history)) {
+      for (const msg of history.slice(-5)) {
+        contents.push({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }],
+        })
+      }
+    }
+
+    // Add current user input
+    contents.push({ role: 'user', parts: [{ text: input }] })
+
+    // Generate response with conversation context
     const response = await genai.models.generateContent({
       model: MODEL_NAME,
-      contents: [
-        { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
-        { role: 'model', parts: [{ text: 'Understood! I\'m Alice, ready to help.' }] },
-        { role: 'user', parts: [{ text: input }] }
-      ],
+      contents,
       config: { temperature: 0.7, tools: [groundingTool] }
     })
 

@@ -157,8 +157,6 @@ export function ParticleSphere({ className, audioRef }: ParticleSphereProps) {
     const bands = bandsRef.current
     const axes = bandAxesRef.current
     const bandE = bandERef.current
-    const analyser = analyserRef.current
-    const freq = analyser ? new Uint8Array(analyser.frequencyBinCount) : null
     let last = performance.now()
 
     const render = () => {
@@ -168,6 +166,9 @@ export function ParticleSphere({ className, audioRef }: ParticleSphereProps) {
       last = now
 
       // amplitude from frequency bands
+      // CRITICAL: Get analyser from ref each frame (it may be created after draw() is called)
+      const analyser = analyserRef.current
+      const freq = analyser ? new Uint8Array(analyser.frequencyBinCount) : null
       let amp = ampRef.current
       const audioEl = audioRef?.current
       const playing = !!audioEl && !audioEl.paused
