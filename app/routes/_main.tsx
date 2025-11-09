@@ -2,6 +2,8 @@ import { Outlet } from 'react-router'
 import { Icon } from '@iconify/react'
 import { useState, useEffect } from 'react'
 import type { Route } from './+types/_main'
+import { useRealtimeStats } from '../hooks/useRealtimeStats'
+import { StatsIndicator } from '../components/StatsIndicator'
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: 'Alice' }, { name: 'description', content: 'Welcome to Alice!' }]
@@ -9,14 +11,13 @@ export function meta({}: Route.MetaArgs) {
 
 export default function MainLayout() {
   const [isDark, setIsDark] = useState(false)
+  const { stats, isConnected } = useRealtimeStats()
 
   useEffect(() => {
-    // 检查系统主题偏好和当前状态
-    const isDarkMode = document.documentElement.classList.contains('dark') || window.matchMedia('(prefers-color-scheme: dark)').matches
+    // 默认使用亮色主题
+    const isDarkMode = false
     setIsDark(isDarkMode)
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark')
-    }
+    document.documentElement.classList.remove('dark')
   }, [])
 
   const toggleTheme = () => {
@@ -33,24 +34,61 @@ export default function MainLayout() {
     <div className="h-screen flex items-center justify-center p-2 bg-white dark:bg-gray-950">
       {/* 外层容器 - 白色外框 */}
       <div className="w-full h-full flex flex-col overflow-hidden">
-        {/* Header - 无背景色 */}
-        <header className="px-6 py-2 shrink-0">
+        {/* Header - 精简优雅设计 */}
+        <header className="pb-2 shrink-0">
           <nav className="flex items-center justify-between">
+            {/* Left: Logo + Description */}
             <div className="flex items-center gap-2">
+              <img src="/logo.png" alt="Alice Logo" className="w-6 h-6" />
               <h1
-                className="text-2xl font-bold animate-gradient bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-size-[300%_100%] bg-clip-text text-transparent"
-                style={{ fontFamily: '"Dancing Script", cursive' }}
+                className="text-md font-bold animate-gradient bg-linear-to-r from-emerald-500 via-green-500 to-teal-500 bg-size-[300%_100%] bg-clip-text text-transparent"
+                style={{ fontFamily: 'var(--font-logo)' }}
               >
-                Alice
+                alice
               </h1>
+              {/* <span className="text-sm text-gray-500 dark:text-gray-400">Your Voice-First AI Chat Companion</span> */}
             </div>
-            <button
-              onClick={toggleTheme}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              <Icon icon={isDark ? 'mdi:white-balance-sunny' : 'mdi:moon-waning-crescent'} className="w-5 h-5" />
-            </button>
+
+            {/* Right: Stats + Theme + Author */}
+            <div className="flex items-center gap-3">
+              {/* 统计信息 */}
+              <StatsIndicator
+                onlineUsers={stats.onlineUsers}
+                concurrent={stats.concurrent}
+                maxConcurrent={stats.maxConcurrent}
+                isConnected={isConnected}
+              />
+
+              {/* 分隔线 */}
+              <div className="w-px h-5 bg-gray-200 dark:bg-gray-700" />
+
+              {/* 主题切换 */}
+              <button
+                onClick={toggleTheme}
+                className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+                title={isDark ? '切换到浅色模式' : '切换到深色模式'}
+              >
+                <Icon icon={isDark ? 'solar:sun-bold' : 'solar:moon-bold'} className="w-4 h-4" />
+              </button>
+
+              {/* 作者信息 */}
+              <a
+                href="https://me.axm.moe"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 transition-all group"
+                title="访问作者主页"
+              >
+                <img
+                  src="https://axm.moe/avatar"
+                  alt="AceXiamo"
+                  className="w-4 h-4 rounded-full ring-1 ring-gray-200 dark:ring-gray-700"
+                />
+                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  AceXiamo
+                </span>
+              </a>
+            </div>
           </nav>
         </header>
 

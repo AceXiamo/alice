@@ -6,7 +6,7 @@ import { ParticleSphere } from '../components/ParticleSphere'
 // import { Meteors } from '../components/meteors'
 
 export function meta({}: Route.MetaArgs) {
-  return [{ title: 'Alice - Voice AI Assistant' }, { name: 'description', content: 'Voice-first AI chat companion' }]
+  return [{ title: 'alice' }, { name: 'description', content: 'Voice-first AI chat companion' }]
 }
 
 // 定义 SpeechRecognition 类型
@@ -40,6 +40,7 @@ export default function HomePage() {
   const [inputValue, setInputValue] = useState('')
   const [isListening, setIsListening] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingDuration, setLoadingDuration] = useState<number>(0)
   const ttsAudioRef = useRef<HTMLAudioElement>(null)
   const [audioFileName, setAudioFileName] = useState<string | null>(null)
   const [audioProgress, setAudioProgress] = useState(0) // 0..1
@@ -114,24 +115,69 @@ export default function HomePage() {
     setMessages((prev) => [...prev, newMessage])
     setInputValue('')
     setIsLoading(true)
+    setLoadingDuration(0)
+
+    // Start a timer to show loading duration
+    const startTime = Date.now()
+    const timerInterval = setInterval(() => {
+      setLoadingDuration(Number(((Date.now() - startTime) / 1000).toFixed(1)))
+    }, 100)
+
     ;(async () => {
       try {
-        // Step 1: Get AI response with conversation history (last 5 messages)
-        const history = messages.slice(-5).map(msg => ({
+        // Get sessionId from sessionStorage (same as SSE connection)
+        const sessionId = sessionStorage.getItem('alice-session-id') || null
+
+        // Get conversation history (last 5 messages)
+        const history = messages.slice(-5).map((msg) => ({
           role: msg.role,
-          content: msg.content
+          content: msg.content,
         }))
-        const res = await fetch('/api/genai', {
+
+        // Call combined AI + TTS endpoint
+        const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             input: newMessage.content,
-            history: history
+            history: history,
+            sessionId: sessionId,
           }),
         })
-        if (!res.ok) throw new Error('api_error')
-        const data = (await res.json()) as { text?: string }
+
+        const data = (await res.json()) as { text?: string; audioUrl?: string; duration?: number; error?: string; message?: string }
+
+        // Handle 429 concurrent limit exceeded
+        if (res.status === 429) {
+          clearInterval(timerInterval)
+          const duration = data.duration || 0
+          setLoadingDuration(duration)
+
+          // Show error message to user
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now(),
+              role: 'assistant' as const,
+              content: data.message || '当前请求繁忙，请稍后重试',
+            },
+          ])
+          return
+        }
+
+        if (!res.ok) {
+          throw new Error(data.error || 'api_error')
+        }
+
         const text = data.text || '...'
+        const audioUrl = data.audioUrl
+        const duration = data.duration || 0
+
+        // Update loading duration with actual API duration
+        clearInterval(timerInterval)
+        setLoadingDuration(duration)
+
+        // Add assistant message to UI only after receiving both text and audio
         setMessages((prev) => [
           ...prev,
           {
@@ -141,50 +187,32 @@ export default function HomePage() {
           },
         ])
 
-        // Step 2: Generate TTS audio
-        try {
-          const ttsRes = await fetch('https://fii0brhpejciqj-8188.proxy.runpod.net/tts', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ text }),
-          })
-          if (!ttsRes.ok) {
-            console.warn('TTS generation failed:', await ttsRes.text())
-            return
+        // Play TTS audio if available
+        if (audioUrl) {
+          if (audioUrlRef.current && audioUrlRef.current.startsWith('blob:')) {
+            URL.revokeObjectURL(audioUrlRef.current)
           }
-          const ttsData = (await ttsRes.json()) as { url?: string; filename?: string }
-          const audioUrl = ttsData.url
-          if (!audioUrl) {
-            console.warn('No audio URL returned from TTS service')
-            return
-          }
-
-          // Step 3: Use proxy URL to avoid CORS issues
-          const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(audioUrl)}`
-
-          if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current)
-          audioUrlRef.current = proxyUrl
-          setAudioFileName(ttsData.filename || 'alice-response.wav')
+          audioUrlRef.current = audioUrl
+          setAudioFileName('alice-response.wav')
           setAudioProgress(0)
           setAudioTimes({ cur: 0, dur: 0 })
 
           const audioEl = ttsAudioRef.current
           if (audioEl) {
-            audioEl.src = proxyUrl
+            audioEl.src = audioUrl
             audioEl.muted = false
             audioEl.volume = 1
             try {
               await audioEl.play()
-              console.log('Playing TTS audio via proxy:', proxyUrl)
+              console.log('Playing TTS audio:', audioUrl)
             } catch (err) {
               console.warn('Audio playback failed:', err)
             }
           }
-        } catch (ttsError) {
-          console.warn('TTS service error:', ttsError)
         }
       } catch (e) {
-        // fallback: 简单回声，便于在无后端时预览
+        clearInterval(timerInterval)
+        // fallback: simple echo for preview when backend is unavailable
         setMessages((prev) => [
           ...prev,
           {
@@ -195,6 +223,8 @@ export default function HomePage() {
         ])
       } finally {
         setIsLoading(false)
+        // Keep duration visible for a moment, then reset
+        setTimeout(() => setLoadingDuration(0), 2000)
       }
     })()
   }
@@ -267,7 +297,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="h-full relative bg-gray-100 dark:bg-gray-900 overflow-hidden">
+    <div className="h-full relative bg-gradient-to-br from-gray-100 via-white to-gray-100 dark:bg-gradient-to-br dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden">
       {/* 主显示：粒子球（3D 大圆球），全屏覆盖；音波由 TTS 音频驱动 */}
       <div className="absolute inset-0">
         <ParticleSphere className="absolute inset-0 translate-y-[-150px] pointer-events-none" audioRef={ttsAudioRef} />
@@ -278,8 +308,8 @@ export default function HomePage() {
       <div className="absolute bottom-20 left-0 right-0 px-6 pb-6 pt-4 pointer-events-none">
         <div className="max-w-4xl mx-auto pointer-events-auto relative">
           {/* 聊天记录展示区域 - 浮动在输入框上方 */}
-          <div className="absolute bottom-full left-0 right-0 mb-4 max-h-[500px] overflow-hidden">
-            <div className="flex flex-col gap-3 pb-2">
+          <div className="absolute bottom-full left-0 right-0 mb-5 max-h-[500px] overflow-hidden">
+            <div className="flex flex-col gap-2.5 pb-2">
               <AnimatePresence mode="popLayout">
                 {messages.slice(-5).map((msg) => (
                   <motion.div
@@ -290,22 +320,30 @@ export default function HomePage() {
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                     className="max-w-full"
                   >
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-start gap-2.5">
                       <div
-                        className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
+                        className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center shadow-sm ${
                           msg.role === 'user'
-                            ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400'
-                            : 'bg-purple-500/20 text-purple-600 dark:text-purple-400'
+                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
+                            : 'bg-gradient-to-br from-purple-500 to-purple-600 text-white'
                         }`}
                       >
                         <Icon
                           icon={msg.role === 'user' ? 'solar:user-bold' : 'solar:magic-stick-3-bold'}
-                          className="w-3 h-3"
+                          className="w-3.5 h-3.5"
                         />
                       </div>
-                      <p className="text-xs leading-relaxed whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 flex-1">
-                        {msg.content}
-                      </p>
+                      <div
+                        className={`flex-1 px-3.5 py-2.5 rounded-2xl shadow-sm ${
+                          msg.role === 'user'
+                            ? 'bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50'
+                            : 'bg-gradient-to-br from-blue-50/90 to-purple-50/90 dark:from-blue-950/50 dark:to-purple-950/50 backdrop-blur-sm border border-blue-200/30 dark:border-blue-800/30'
+                        }`}
+                      >
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word text-gray-800 dark:text-gray-100">
+                          {msg.content}
+                        </p>
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -343,14 +381,16 @@ export default function HomePage() {
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                  disabled={true}
+                  className="p-2.5 disabled:opacity-40 disabled:cursor-not-allowed text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
                   title="附加文件"
                 >
                   <Icon icon="solar:paperclip-bold" className="w-5 h-5" />
                 </button>
                 <button
                   type="button"
-                  className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                  disabled={true}
+                  className="p-2.5 disabled:opacity-40 disabled:cursor-not-allowed text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
                   title="添加图片"
                 >
                   <Icon icon="solar:gallery-add-bold" className="w-5 h-5" />
@@ -358,8 +398,9 @@ export default function HomePage() {
                 {/* 上传音频文件 */}
                 <button
                   type="button"
+                  disabled={true}
                   onClick={handlePickAudio}
-                  className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                  className="p-2.5 disabled:opacity-40 disabled:cursor-not-allowed text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
                   title="上传音频（mp3 / wav / m4a）"
                 >
                   <Icon icon="solar:music-note-2-bold" className="w-5 h-5" />
@@ -375,8 +416,9 @@ export default function HomePage() {
               <div className="flex items-center gap-1">
                 <motion.button
                   type="button"
+                  disabled={true}
                   onClick={isListening ? handleStopListening : handleStartListening}
-                  className={`p-2.5 rounded-xl transition-colors ${
+                  className={`p-2.5 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors ${
                     isListening
                       ? 'text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-900/20'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -391,10 +433,14 @@ export default function HomePage() {
                   type="button"
                   onClick={handleSend}
                   disabled={!inputValue.trim() || isLoading}
-                  className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 transition-all"
-                  title={isLoading ? '加载中...' : '发送消息'}
+                  className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 transition-all min-w-[40px] flex items-center justify-center"
+                  title={isLoading ? `加载中... ${loadingDuration}s` : '发送消息'}
                 >
-                  <Icon icon={isLoading ? 'svg-spinners:3-dots-fade' : 'solar:alt-arrow-up-bold'} className="w-5 h-5" />
+                  {isLoading && loadingDuration > 0 ? (
+                    <span className="text-xs font-medium tabular-nums min-w-[45px]">{loadingDuration.toFixed(1)}s</span>
+                  ) : (
+                    <Icon icon={isLoading ? 'svg-spinners:3-dots-fade' : 'solar:alt-arrow-up-bold'} className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
