@@ -35,24 +35,6 @@ interface ISpeechRecognition extends EventTarget {
   onend: (() => void) | null
 }
 
-// Typing Animation Component
-function TypingAnimation({ text, className }: { text: string; className?: string }) {
-  const [displayText, setDisplayText] = useState('')
-  const [currentIndex, setCurrentIndex] = useState(0)
-
-  useEffect(() => {
-    if (currentIndex < text.length) {
-      const timeout = setTimeout(() => {
-        setDisplayText((prev) => prev + text[currentIndex])
-        setCurrentIndex((prev) => prev + 1)
-      }, 80)
-      return () => clearTimeout(timeout)
-    }
-  }, [currentIndex, text])
-
-  return <span className={className}>{displayText}</span>
-}
-
 export default function HomePage() {
   const [messages, setMessages] = useState<Array<{ id: number; role: 'user' | 'assistant'; content: string }>>([])
   const [inputValue, setInputValue] = useState('')
@@ -63,17 +45,8 @@ export default function HomePage() {
   const [audioProgress, setAudioProgress] = useState(0) // 0..1
   const [audioTimes, setAudioTimes] = useState<{ cur: number; dur: number }>({ cur: 0, dur: 0 })
   const audioUrlRef = useRef<string | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<ISpeechRecognition | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
 
   useEffect(() => {
     // 初始化语音识别
@@ -141,14 +114,20 @@ export default function HomePage() {
     setMessages((prev) => [...prev, newMessage])
     setInputValue('')
     setIsLoading(true)
-
     ;(async () => {
       try {
-        // Step 1: Get AI response
+        // Step 1: Get AI response with conversation history (last 5 messages)
+        const history = messages.slice(-5).map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
         const res = await fetch('/api/genai', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ input: newMessage.content }),
+          body: JSON.stringify({
+            input: newMessage.content,
+            history: history
+          }),
         })
         if (!res.ok) throw new Error('api_error')
         const data = (await res.json()) as { text?: string }
@@ -164,7 +143,7 @@ export default function HomePage() {
 
         // Step 2: Generate TTS audio
         try {
-          const ttsRes = await fetch('https://lxa43eyg6x78cq-8188.proxy.runpod.net/tts', {
+          const ttsRes = await fetch('https://fii0brhpejciqj-8188.proxy.runpod.net/tts', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ text }),
@@ -291,13 +270,49 @@ export default function HomePage() {
     <div className="h-full relative bg-gray-100 dark:bg-gray-900 overflow-hidden">
       {/* 主显示：粒子球（3D 大圆球），全屏覆盖；音波由 TTS 音频驱动 */}
       <div className="absolute inset-0">
-        <ParticleSphere className="absolute inset-0 pointer-events-none" audioRef={ttsAudioRef} />
+        <ParticleSphere className="absolute inset-0 translate-y-[-150px] pointer-events-none" audioRef={ttsAudioRef} />
         <audio ref={ttsAudioRef} className="hidden" />
       </div>
 
       {/* 底部输入区域 - 保持原位置（悬浮） */}
       <div className="absolute bottom-20 left-0 right-0 px-6 pb-6 pt-4 pointer-events-none">
-        <div className="max-w-4xl mx-auto pointer-events-auto">
+        <div className="max-w-4xl mx-auto pointer-events-auto relative">
+          {/* 聊天记录展示区域 - 浮动在输入框上方 */}
+          <div className="absolute bottom-full left-0 right-0 mb-4 max-h-[500px] overflow-hidden">
+            <div className="flex flex-col gap-3 pb-2">
+              <AnimatePresence mode="popLayout">
+                {messages.slice(-5).map((msg) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                    className="max-w-full"
+                  >
+                    <div className="flex items-start gap-2">
+                      <div
+                        className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
+                          msg.role === 'user'
+                            ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400'
+                            : 'bg-purple-500/20 text-purple-600 dark:text-purple-400'
+                        }`}
+                      >
+                        <Icon
+                          icon={msg.role === 'user' ? 'solar:user-bold' : 'solar:magic-stick-3-bold'}
+                          className="w-3 h-3"
+                        />
+                      </div>
+                      <p className="text-xs leading-relaxed whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 flex-1">
+                        {msg.content}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+
           <div className="relative bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-md focus-within:shadow-xl transition-all">
             <textarea
               ref={textareaRef}
