@@ -408,7 +408,7 @@ export default function HomePage() {
               <div className="flex items-center gap-1">
                 <motion.button
                   type="button"
-                  disabled={true}
+                  disabled={isLoading}
                   onClick={isListening ? handleStopListening : handleStartListening}
                   className={`p-2.5 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors ${
                     isListening
