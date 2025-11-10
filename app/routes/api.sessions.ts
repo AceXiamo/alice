@@ -1,7 +1,7 @@
 /**
  * API endpoint for listing all chat sessions
  */
-import { json, type LoaderFunctionArgs } from 'react-router';
+import type { LoaderFunctionArgs } from 'react-router';
 import { prisma } from '~/lib/db.server';
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -31,7 +31,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       },
     });
 
-    return json({
+    return Response.json({
       sessions: sessions.map((session) => ({
         id: session.id,
         createdAt: session.createdAt.getTime(),
@@ -45,6 +45,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     });
   } catch (error) {
     console.error('Error fetching sessions:', error);
-    return json({ error: 'Failed to fetch sessions' }, { status: 500 });
+    return Response.json({ error: 'Failed to fetch sessions' }, { status: 500 });
   }
 }
