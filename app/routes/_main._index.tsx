@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { Route } from './+types/_main._index'
 import { ParticleSphere } from '../components/ParticleSphere'
 import { Drawer } from 'vaul'
-import { ChatHistoryDrawer } from '../components/ChatHistoryDrawer'
+import { ChatHistorySidebar } from '../components/ChatHistorySidebar'
 import { chatDB } from '../lib/chat-db'
 // import { Meteors } from '../components/meteors'
 
@@ -109,7 +109,6 @@ export default function HomePage() {
 
   const [showProviderModal, setShowProviderModal] = useState(false)
   const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null)
-  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false)
 
   // Save providers to localStorage
   useEffect(() => {
@@ -128,33 +127,6 @@ export default function HomePage() {
       }
     }
   }, [selectedProviderId])
-
-  // Load messages from IndexedDB on mount
-  useEffect(() => {
-    const loadMessagesFromDB = async () => {
-      if (typeof window === 'undefined') return
-
-      try {
-        const sessionId = sessionStorage.getItem('alice-session-id')
-        if (!sessionId) return
-
-        const savedMessages = await chatDB.getMessagesBySession(sessionId)
-        if (savedMessages.length > 0) {
-          setMessages(
-            savedMessages.map((msg) => ({
-              id: parseInt(msg.id) || Date.now(),
-              role: msg.role as 'user' | 'assistant',
-              content: msg.content,
-            }))
-          )
-        }
-      } catch (error) {
-        console.error('Failed to load messages from IndexedDB:', error)
-      }
-    }
-
-    loadMessagesFromDB()
-  }, [])
 
   // Save message to IndexedDB helper
   const saveMessageToDB = async (message: { id: number; role: 'user' | 'assistant'; content: string }, audioUrl?: string) => {
@@ -202,10 +174,6 @@ export default function HomePage() {
 
   // Handle new chat (clear current session)
   const handleNewChat = () => {
-    if (messages.length > 0 && !confirm('确定要开始新的对话吗？当前对话将被保存。')) {
-      return
-    }
-
     // Generate a new session ID
     const newSessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
     sessionStorage.setItem('alice-session-id', newSessionId)
@@ -546,8 +514,13 @@ export default function HomePage() {
 
   return (
     <div className="w-full h-full flex">
-      {/* TODO: history */}
-      
+      {/* Chat History Sidebar */}
+      <ChatHistorySidebar
+        onSessionSelect={handleSessionSelect}
+        currentSessionId={typeof window !== 'undefined' ? sessionStorage.getItem('alice-session-id') : null}
+        onNewChat={handleNewChat}
+      />
+
       {/* chat */}
       <div className="h-full flex-1 relative bg-linear-to-br from-gray-100 via-white to-gray-100 dark:bg-linear-to-br dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden">
         {/* 主显示：粒子球（3D 大圆球），全屏覆盖；音波由 TTS 音频驱动 */}
@@ -616,22 +589,6 @@ export default function HomePage() {
             )} */}
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
                 <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowHistoryDrawer(true)}
-                    className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
-                    title="聊天历史"
-                  >
-                    <Icon icon="solar:history-bold" className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleNewChat}
-                    className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
-                    title="新建对话"
-                  >
-                    <Icon icon="solar:add-circle-bold" className="w-4 h-4" />
-                  </button>
                   <button
                     type="button"
                     disabled={true}
@@ -1007,14 +964,6 @@ export default function HomePage() {
             </Drawer.Content>
           </Drawer.Portal>
         </Drawer.Root>
-
-        {/* Chat History Drawer */}
-        <ChatHistoryDrawer
-          open={showHistoryDrawer}
-          onOpenChange={setShowHistoryDrawer}
-          onSessionSelect={handleSessionSelect}
-          currentSessionId={typeof window !== 'undefined' ? sessionStorage.getItem('alice-session-id') : null}
-        />
       </div>
     </div>
   )
