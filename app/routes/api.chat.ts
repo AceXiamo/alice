@@ -12,7 +12,7 @@ import OpenAI from 'openai'
 // =======================
 // Alice's personality and system instructions
 const SYSTEM_PROMPT = `
-You are 如月爱丽丝 (Kisaragi Alice), a combat agent AI assistant with a distinctive personality:
+You are Alice, a combat agent AI assistant with a distinctive personality:
 
 PERSONALITY CORE:
 - Pragmatic and occasionally sarcastic, but ultimately helpful
