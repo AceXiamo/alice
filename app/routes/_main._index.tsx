@@ -109,6 +109,7 @@ export default function HomePage() {
 
   const [showProviderModal, setShowProviderModal] = useState(false)
   const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null)
+  const [showHistorySidebar, setShowHistorySidebar] = useState(true)
 
   // Save providers to localStorage
   useEffect(() => {
@@ -127,6 +128,19 @@ export default function HomePage() {
       }
     }
   }, [selectedProviderId])
+
+  // Keyboard shortcut: Cmd/Ctrl + . to toggle history sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === '.') {
+        e.preventDefault()
+        setShowHistorySidebar((prev) => !prev)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Save message to IndexedDB helper
   const saveMessageToDB = async (message: { id: number; role: 'user' | 'assistant'; content: string }, audioUrl?: string) => {
@@ -515,11 +529,22 @@ export default function HomePage() {
   return (
     <div className="w-full h-full flex">
       {/* Chat History Sidebar */}
-      <ChatHistorySidebar
-        onSessionSelect={handleSessionSelect}
-        currentSessionId={typeof window !== 'undefined' ? sessionStorage.getItem('alice-session-id') : null}
-        onNewChat={handleNewChat}
-      />
+      <AnimatePresence mode="wait">
+        {showHistorySidebar && (
+          <motion.div
+            initial={{ x: -280, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -280, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+          >
+            <ChatHistorySidebar
+              onSessionSelect={handleSessionSelect}
+              currentSessionId={typeof window !== 'undefined' ? sessionStorage.getItem('alice-session-id') : null}
+              onNewChat={handleNewChat}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* chat */}
       <div className="h-full flex-1 relative bg-linear-to-br from-gray-100 via-white to-gray-100 dark:bg-linear-to-br dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden">
