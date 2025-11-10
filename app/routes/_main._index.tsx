@@ -40,6 +40,7 @@ interface ISpeechRecognition extends EventTarget {
 
 export default function HomePage() {
   const [messages, setMessages] = useState<Array<{ id: number; role: 'user' | 'assistant'; content: string }>>([])
+  const [displayedMessages, setDisplayedMessages] = useState<Array<{ id: number; role: 'user' | 'assistant'; content: string }>>([])
   const [inputValue, setInputValue] = useState('')
   const [isListening, setIsListening] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -142,6 +143,32 @@ export default function HomePage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Manage displayed messages for proper exit animations
+  useEffect(() => {
+    const latestMessages = messages.slice(-5)
+    const latestIds = new Set(latestMessages.map((m) => m.id))
+
+    // Find messages that need to exit (in displayedMessages but not in latestMessages)
+    const exitingMessages = displayedMessages.filter((m) => !latestIds.has(m.id))
+
+    if (exitingMessages.length > 0) {
+      // Show both exiting messages and new messages during transition
+      const transitionMessages = [...exitingMessages, ...latestMessages]
+      setDisplayedMessages(transitionMessages)
+
+      // After animation completes, show only latest messages
+      const timer = setTimeout(() => {
+        setDisplayedMessages(latestMessages)
+      }, 320) // Slightly longer than animation duration to ensure completion
+
+      return () => clearTimeout(timer)
+    } else {
+      // No exiting messages, update immediately
+      setDisplayedMessages(latestMessages)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages])
+
   // Save message to IndexedDB helper
   const saveMessageToDB = async (message: { id: number; role: 'user' | 'assistant'; content: string }, audioUrl?: string) => {
     if (typeof window === 'undefined') return
@@ -170,13 +197,13 @@ export default function HomePage() {
     try {
       // Load messages from the selected session
       const savedMessages = await chatDB.getMessagesBySession(sessionId)
-      setMessages(
-        savedMessages.map((msg) => ({
-          id: parseInt(msg.id) || Date.now(),
-          role: msg.role as 'user' | 'assistant',
-          content: msg.content,
-        }))
-      )
+      const loadedMessages = savedMessages.map((msg) => ({
+        id: parseInt(msg.id) || Date.now(),
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+      }))
+      setMessages(loadedMessages)
+      setDisplayedMessages(loadedMessages.slice(-5))
 
       // Update session ID in sessionStorage
       sessionStorage.setItem('alice-session-id', sessionId)
@@ -192,6 +219,7 @@ export default function HomePage() {
     const newSessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
     sessionStorage.setItem('alice-session-id', newSessionId)
     setMessages([])
+    setDisplayedMessages([])
   }
 
   // Provider management functions
@@ -547,7 +575,7 @@ export default function HomePage() {
       </AnimatePresence>
 
       {/* chat */}
-      <div className="h-full flex-1 rounded-lg relative bg-linear-to-br from-gray-100 via-white to-gray-100 dark:bg-linear-to-br dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden">
+      <div className="h-full flex-1 rounded-lg relative bg-linear-to-br from-gray-100 via-white to-gray-100 dark:bg-linear-to-br dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden transition-all duration-300">
         {/* 主显示：粒子球（3D 大圆球），全屏覆盖；音波由 TTS 音频驱动 */}
         <div className="absolute inset-0">
           <ParticleSphere className="absolute inset-0 translate-y-[-150px] pointer-events-none" audioRef={ttsAudioRef} />
@@ -560,14 +588,15 @@ export default function HomePage() {
             {/* 聊天记录展示区域 - 浮动在输入框上方 */}
             <div className="absolute bottom-full left-0 right-0 mb-5 max-h-[500px] overflow-hidden">
               <div className="flex flex-col gap-2.5 pb-2">
-                <AnimatePresence mode="popLayout">
-                  {messages.slice(-5).map((msg) => (
+                <AnimatePresence initial={false}>
+                  {displayedMessages.map((msg) => (
                     <motion.div
                       key={msg.id}
                       initial={{ opacity: 0, y: 20, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -20, scale: 0.95 }}
                       transition={{ duration: 0.3, ease: 'easeOut' }}
+                      layout
                       className="max-w-full"
                     >
                       <div className="flex items-start gap-2">
