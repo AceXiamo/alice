@@ -376,7 +376,7 @@ export default function HomePage() {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="How can I help you today?"
-              className="w-full bg-transparent px-4 pt-4 pb-20 text-[15px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none max-h-[200px] leading-relaxed overflow-hidden"
+              className="w-full bg-transparent px-4 pt-4 pb-20 text-[13px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none max-h-[200px] leading-relaxed overflow-hidden"
               rows={1}
               style={{ minHeight: '72px' }}
             />
