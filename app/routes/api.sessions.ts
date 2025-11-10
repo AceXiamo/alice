@@ -2,7 +2,7 @@
  * API endpoint for listing all chat sessions
  */
 import type { LoaderFunctionArgs } from 'react-router';
-import { prisma } from '~/lib/db.server';
+import { prisma } from '../lib/prisma';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   try {

@@ -1,7 +1,7 @@
 import { Icon } from '@iconify/react';
 import { Drawer } from 'vaul';
 import { useState, useEffect } from 'react';
-import { chatDB, type ChatSession, type ChatMessage } from '~/lib/chat-db';
+import { chatDB, type ChatSession, type ChatMessage } from '../lib/chat-db';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ChatHistoryDrawerProps {

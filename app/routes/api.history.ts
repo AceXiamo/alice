@@ -2,7 +2,7 @@
  * API endpoint for fetching chat history
  */
 import type { LoaderFunctionArgs } from 'react-router';
-import { prisma } from '~/lib/db.server';
+import { prisma } from '../lib/db.server';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
