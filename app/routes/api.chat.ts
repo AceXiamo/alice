@@ -57,7 +57,7 @@ const genai = new GoogleGenAI({
 })
 
 // TTS service configuration
-const TTS_SERVICE_URL = 'https://fii0brhpejciqj-8188.proxy.runpod.net/tts'
+const TTS_SERVICE_URL = 'https://p36vqckz6q7ee5-7865.proxy.runpod.net/tts'
 
 export async function action({ request }: Route.ActionFunctionArgs) {
   const startTime = Date.now()
