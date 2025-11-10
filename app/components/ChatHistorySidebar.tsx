@@ -1,81 +1,81 @@
-import { Icon } from '@iconify/react';
-import { useState, useEffect } from 'react';
-import { chatDB } from '../lib/chat-db';
-import type { ChatSession } from '../lib/chat-db.types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Icon } from '@iconify/react'
+import { useState, useEffect } from 'react'
+import { chatDB } from '../lib/chat-db'
+import type { ChatSession } from '../lib/chat-db.types'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface ChatHistorySidebarProps {
-  onSessionSelect: (sessionId: string) => void;
-  currentSessionId: string | null;
-  onNewChat: () => void;
+  onSessionSelect: (sessionId: string) => void
+  currentSessionId: string | null
+  onNewChat: () => void
 }
 
 export function ChatHistorySidebar({ onSessionSelect, currentSessionId, onNewChat }: ChatHistorySidebarProps) {
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
   // Load sessions on mount
   useEffect(() => {
-    loadSessions();
-  }, []);
+    loadSessions()
+  }, [])
 
   const loadSessions = async () => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return
 
     try {
-      setIsLoading(true);
-      const allSessions = await chatDB.getAllSessions();
-      setSessions(allSessions);
+      setIsLoading(true)
+      const allSessions = await chatDB.getAllSessions()
+      setSessions(allSessions)
     } catch (error) {
-      console.error('Failed to load sessions:', error);
+      console.error('Failed to load sessions:', error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation()
 
-    if (!confirm('确定要删除这个会话吗？')) return;
+    if (!confirm('确定要删除这个会话吗？')) return
 
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return
 
     try {
-      await chatDB.deleteSession(sessionId);
-      await loadSessions();
+      await chatDB.deleteSession(sessionId)
+      await loadSessions()
 
       // If deleted session is current, start new chat
       if (currentSessionId === sessionId) {
-        onNewChat();
+        onNewChat()
       }
     } catch (error) {
-      console.error('Failed to delete session:', error);
-      alert('删除失败，请重试');
+      console.error('Failed to delete session:', error)
+      alert('删除失败，请重试')
     }
-  };
+  }
 
   const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return '刚刚';
-    if (diffMins < 60) return `${diffMins} 分钟前`;
-    if (diffHours < 24) return `${diffHours} 小时前`;
-    if (diffDays < 7) return `${diffDays} 天前`;
+    if (diffMins < 1) return '刚刚'
+    if (diffMins < 60) return `${diffMins} 分钟前`
+    if (diffHours < 24) return `${diffHours} 小时前`
+    if (diffDays < 7) return `${diffDays} 天前`
 
     return date.toLocaleDateString('zh-CN', {
       month: 'short',
       day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-    });
-  };
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+    })
+  }
 
   return (
-    <div className="w-64 h-full flex flex-col bg-gradient-to-b from-gray-50 to-gray-100/50 dark:from-gray-900 dark:to-gray-950 border-r border-gray-200/80 dark:border-gray-800/80 shadow-lg">
+    <div className="w-64 h-full flex flex-col rounded-lg bg-gradient-to-b from-gray-50 to-gray-100/50 dark:from-gray-900 dark:to-gray-950">
       {/* Header */}
       <div className="p-4 border-b border-gray-200/60 dark:border-gray-800/60">
         <button
@@ -105,13 +105,7 @@ export function ChatHistorySidebar({ onSessionSelect, currentSessionId, onNewCha
           <div className="space-y-2">
             <AnimatePresence mode="popLayout">
               {sessions.map((session) => (
-                <motion.div
-                  key={session.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
+                <motion.div key={session.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
                   <button
                     onClick={() => onSessionSelect(session.id)}
                     className={`group relative w-full text-left p-3.5 rounded-xl transition-all duration-200 ${
@@ -121,18 +115,12 @@ export function ChatHistorySidebar({ onSessionSelect, currentSessionId, onNewCha
                     }`}
                   >
                     {/* Active indicator */}
-                    {currentSessionId === session.id && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />
-                    )}
+                    {currentSessionId === session.id && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />}
 
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {currentSessionId === session.id && (
-                          <span className="shrink-0 w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50 animate-pulse" />
-                        )}
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
-                          {formatDate(session.updatedAt)}
-                        </p>
+                        {currentSessionId === session.id && <span className="shrink-0 w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50 animate-pulse" />}
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{formatDate(session.updatedAt)}</p>
                       </div>
                       <button
                         onClick={(e) => handleDeleteSession(session.id, e)}
@@ -142,9 +130,7 @@ export function ChatHistorySidebar({ onSessionSelect, currentSessionId, onNewCha
                         <Icon icon="solar:trash-bin-trash-bold" className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 mb-2 leading-relaxed">
-                      {session.lastMessage || '空会话'}
-                    </p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 mb-2 leading-relaxed">{session.lastMessage || '空会话'}</p>
                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                       <Icon icon="solar:chat-line-bold" className="w-3.5 h-3.5" />
                       <span>{session.messageCount} 条消息</span>
@@ -157,5 +143,5 @@ export function ChatHistorySidebar({ onSessionSelect, currentSessionId, onNewCha
         )}
       </div>
     </div>
-  );
+  )
 }
