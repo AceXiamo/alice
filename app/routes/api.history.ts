@@ -1,7 +1,7 @@
 /**
  * API endpoint for fetching chat history
  */
-import { json, type LoaderFunctionArgs } from 'react-router';
+import type { LoaderFunctionArgs } from 'react-router';
 import { prisma } from '~/lib/db.server';
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -9,7 +9,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const sessionId = url.searchParams.get('sessionId');
 
   if (!sessionId) {
-    return json({ error: 'Session ID is required' }, { status: 400 });
+    return Response.json({ error: 'Session ID is required' }, { status: 400 });
   }
 
   try {
@@ -30,7 +30,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       },
     });
 
-    return json({
+    return Response.json({
       sessionId,
       messages: messages.map((msg) => ({
         id: msg.id,
@@ -43,6 +43,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     });
   } catch (error) {
     console.error('Error fetching chat history:', error);
-    return json({ error: 'Failed to fetch chat history' }, { status: 500 });
+    return Response.json({ error: 'Failed to fetch chat history' }, { status: 500 });
   }
 }
