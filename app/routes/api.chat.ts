@@ -131,10 +131,19 @@ export async function action({ request }: Route.ActionFunctionArgs) {
   }
 
   try {
-    const { input, history, sessionId } = (await request.json()) as {
+    const { input, history, sessionId, aiConfig } = (await request.json()) as {
       input?: string
       history?: Array<{ role: 'user' | 'assistant'; content: string }>
       sessionId?: string
+      aiConfig?: {
+        provider?: 'vertexai' | 'gemini' | 'openai'
+        endpoint?: string
+        apiKey?: string
+        credentials?: string  // Vertex AI credentials JSON
+        location?: string     // Vertex AI region location
+        model?: string
+        enableSearch?: boolean
+      }
     }
 
     if (!input || !input.trim()) {
@@ -144,17 +153,35 @@ export async function action({ request }: Route.ActionFunctionArgs) {
       })
     }
 
+    // Merge client config with server defaults
+    const provider = aiConfig?.provider || (USE_OPENAI ? 'openai' : 'vertexai')
+    const endpoint = aiConfig?.endpoint || (provider === 'openai' ? OPENAI_API_ENDPOINT : '')
+    const apiKey = aiConfig?.apiKey || (provider === 'openai' ? OPENAI_API_KEY : '')
+    const credentials = aiConfig?.credentials || ''  // Vertex AI credentials JSON
+    const location = aiConfig?.location || 'us-central1'  // Vertex AI region location
+    const model = aiConfig?.model || (provider === 'openai' ? OPENAI_MODEL : MODEL_NAME)
+    const enableSearch = aiConfig?.enableSearch || false
+
     // Validate configuration based on selected provider
-    if (USE_OPENAI) {
-      if (!OPENAI_API_KEY) {
+    if (provider === 'openai') {
+      if (!apiKey) {
         return new Response(JSON.stringify({ error: 'missing_openai_api_key' }), {
           status: 500,
           headers: { 'content-type': 'application/json' },
         })
       }
-    } else {
-      if (!PROJECT_ID || !credentials.project_id) {
+    } else if (provider === 'vertexai') {
+      // For Vertex AI: need either server credentials or client credentials
+      if (!credentials && !PROJECT_ID) {
         return new Response(JSON.stringify({ error: 'missing_vertex_ai_config' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+    } else if (provider === 'gemini') {
+      // For Gemini API: need API key
+      if (!apiKey) {
+        return new Response(JSON.stringify({ error: 'missing_gemini_api_key' }), {
           status: 500,
           headers: { 'content-type': 'application/json' },
         })
@@ -164,10 +191,33 @@ export async function action({ request }: Route.ActionFunctionArgs) {
     // Step 1: Generate AI response
     let text: string
     try {
-      if (USE_OPENAI) {
-        text = await generateOpenAIResponse(input, history)
+      if (provider === 'openai') {
+        text = await generateOpenAIResponse(input, history, { endpoint, apiKey, model })
+      } else if (provider === 'vertexai') {
+        // Vertex AI: use credentials JSON (only pass if not empty)
+        text = await generateGeminiResponse(
+          input, 
+          history, 
+          enableSearch, 
+          model, 
+          credentials && credentials.trim() ? credentials : undefined, 
+          true,
+          undefined,
+          undefined,
+          location
+        )
       } else {
-        text = await generateGeminiResponse(input, history)
+        // Gemini API: use API key (only pass if not empty)
+        text = await generateGeminiResponse(
+          input, 
+          history, 
+          enableSearch, 
+          model, 
+          undefined, 
+          false, 
+          apiKey && apiKey.trim() ? apiKey : undefined, 
+          endpoint
+        )
       }
     } catch (aiError) {
       console.error('AI generation error:', aiError)
@@ -276,7 +326,8 @@ export async function action({ request }: Route.ActionFunctionArgs) {
  */
 async function generateOpenAIResponse(
   input: string,
-  history?: Array<{ role: 'user' | 'assistant'; content: string }>
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>,
+  config?: { endpoint?: string; apiKey?: string; model?: string }
 ): Promise<string> {
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
     { role: 'system', content: SYSTEM_PROMPT },
@@ -295,8 +346,16 @@ async function generateOpenAIResponse(
   // Add current user input
   messages.push({ role: 'user', content: input })
 
-  const completion = await openai.chat.completions.create({
-    model: OPENAI_MODEL,
+  // Create OpenAI client with custom config if provided
+  const client = config?.endpoint || config?.apiKey
+    ? new OpenAI({
+        apiKey: config.apiKey || OPENAI_API_KEY,
+        baseURL: config.endpoint || OPENAI_API_ENDPOINT,
+      })
+    : openai
+
+  const completion = await client.chat.completions.create({
+    model: config?.model || OPENAI_MODEL,
     messages,
     temperature: 0.7,
   })
@@ -310,11 +369,18 @@ async function generateOpenAIResponse(
 }
 
 /**
- * Generate AI response using Gemini
+ * Generate AI response using Gemini (Vertex AI or Gemini API)
  */
 async function generateGeminiResponse(
   input: string,
-  history?: Array<{ role: 'user' | 'assistant'; content: string }>
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>,
+  enableSearch: boolean = false,
+  model?: string,
+  credentialsJson?: string,
+  isVertexAI: boolean = false,
+  apiKey?: string,
+  endpoint?: string,
+  location?: string
 ): Promise<string> {
   const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [
     { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
@@ -334,13 +400,62 @@ async function generateGeminiResponse(
   // Add current user input
   contents.push({ role: 'user', parts: [{ text: input }] })
 
+  // Build config with optional search tool
+  const config: any = { temperature: 0.7 }
+  if (enableSearch) {
+    config.tools = [groundingTool]
+  }
+
+  // Create custom Gemini client based on type
+  let client = genai
+  
+  if (isVertexAI) {
+    // Vertex AI with custom credentials
+    if (credentialsJson && credentialsJson.trim()) {
+      try {
+        const customCredentials = JSON.parse(credentialsJson)
+        console.log('Parsed credentials, project_id:', customCredentials.project_id)
+        
+        // Validate required fields
+        if (!customCredentials.project_id || !customCredentials.private_key || !customCredentials.client_email) {
+          throw new Error('Missing required fields in credentials JSON (project_id, private_key, client_email)')
+        }
+        
+        client = new GoogleGenAI({
+          vertexai: true,
+          project: customCredentials.project_id,
+          location: location || 'us-central1',
+          googleAuthOptions: {
+            credentials: customCredentials,
+          },
+        })
+        console.log('Successfully created custom Vertex AI client')
+      } catch (error) {
+        console.error('Failed to initialize Vertex AI client:', error)
+        if (error instanceof SyntaxError) {
+          throw new Error('Invalid JSON format in credentials')
+        }
+        throw new Error(`Vertex AI initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    }
+    // Otherwise use default server genai client (already initialized with server credentials)
+  } else if (apiKey && apiKey.trim()) {
+    // Gemini API with custom API key
+    // Note: GoogleGenAI doesn't support custom endpoint for Gemini API
+    // If endpoint is needed, it should be handled differently
+    client = new GoogleGenAI({
+      apiKey: apiKey,
+    })
+  }
+
   // Generate response with conversation context
-  const response = await genai.models.generateContent({
-    model: MODEL_NAME,
+  const response = await client.models.generateContent({
+    model: model || MODEL_NAME,
     contents,
-    config: { temperature: 0.7, tools: [groundingTool] },
+    config,
   })
 
+  console.log('response', response)
   const text = extractText(response)
   if (!text) {
     throw new Error('Empty Gemini response')
