@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import type { Route } from './+types/_main._index'
 import { ParticleSphere } from '../components/ParticleSphere'
 import { Drawer } from 'vaul'
+import { ChatHistoryDrawer } from '../components/ChatHistoryDrawer'
+import { chatDB } from '../lib/chat-db'
 // import { Meteors } from '../components/meteors'
 
 export function meta({}: Route.MetaArgs) {
@@ -107,6 +109,7 @@ export default function HomePage() {
 
   const [showProviderModal, setShowProviderModal] = useState(false)
   const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null)
+  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false)
 
   // Save providers to localStorage
   useEffect(() => {
@@ -125,6 +128,89 @@ export default function HomePage() {
       }
     }
   }, [selectedProviderId])
+
+  // Load messages from IndexedDB on mount
+  useEffect(() => {
+    const loadMessagesFromDB = async () => {
+      if (typeof window === 'undefined') return
+
+      try {
+        const sessionId = sessionStorage.getItem('alice-session-id')
+        if (!sessionId) return
+
+        const savedMessages = await chatDB.getMessagesBySession(sessionId)
+        if (savedMessages.length > 0) {
+          setMessages(
+            savedMessages.map((msg) => ({
+              id: parseInt(msg.id) || Date.now(),
+              role: msg.role as 'user' | 'assistant',
+              content: msg.content,
+            }))
+          )
+        }
+      } catch (error) {
+        console.error('Failed to load messages from IndexedDB:', error)
+      }
+    }
+
+    loadMessagesFromDB()
+  }, [])
+
+  // Save message to IndexedDB helper
+  const saveMessageToDB = async (message: { id: number; role: 'user' | 'assistant'; content: string }, audioUrl?: string) => {
+    if (typeof window === 'undefined') return
+
+    try {
+      const sessionId = sessionStorage.getItem('alice-session-id')
+      if (!sessionId) return
+
+      await chatDB.saveMessage({
+        id: message.id.toString(),
+        sessionId,
+        role: message.role,
+        content: message.content,
+        audioUrl,
+        createdAt: Date.now(),
+      })
+    } catch (error) {
+      console.error('Failed to save message to IndexedDB:', error)
+    }
+  }
+
+  // Handle session switching
+  const handleSessionSelect = async (sessionId: string) => {
+    if (typeof window === 'undefined') return
+
+    try {
+      // Load messages from the selected session
+      const savedMessages = await chatDB.getMessagesBySession(sessionId)
+      setMessages(
+        savedMessages.map((msg) => ({
+          id: parseInt(msg.id) || Date.now(),
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+        }))
+      )
+
+      // Update session ID in sessionStorage
+      sessionStorage.setItem('alice-session-id', sessionId)
+    } catch (error) {
+      console.error('Failed to load session:', error)
+      alert('加载会话失败，请重试')
+    }
+  }
+
+  // Handle new chat (clear current session)
+  const handleNewChat = () => {
+    if (messages.length > 0 && !confirm('确定要开始新的对话吗？当前对话将被保存。')) {
+      return
+    }
+
+    // Generate a new session ID
+    const newSessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+    sessionStorage.setItem('alice-session-id', newSessionId)
+    setMessages([])
+  }
 
   // Provider management functions
   const handleAddProvider = () => {
@@ -261,6 +347,8 @@ export default function HomePage() {
       content: inputValue,
     }
     setMessages((prev) => [...prev, newMessage])
+    // Save user message to IndexedDB
+    saveMessageToDB(newMessage)
     setInputValue('')
     setIsLoading(true)
     setLoadingDuration(0)
@@ -316,14 +404,13 @@ export default function HomePage() {
           setLoadingDuration(duration)
 
           // Show error message to user
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: Date.now(),
-              role: 'assistant' as const,
-              content: data.message || '当前请求繁忙，请稍后重试',
-            },
-          ])
+          const errorMessage = {
+            id: Date.now(),
+            role: 'assistant' as const,
+            content: data.message || '当前请求繁忙，请稍后重试',
+          }
+          setMessages((prev) => [...prev, errorMessage])
+          saveMessageToDB(errorMessage)
           return
         }
 
@@ -340,14 +427,14 @@ export default function HomePage() {
         setLoadingDuration(duration)
 
         // Add assistant message to UI only after receiving both text and audio
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now(),
-            role: 'assistant' as const,
-            content: text,
-          },
-        ])
+        const assistantMessage = {
+          id: Date.now(),
+          role: 'assistant' as const,
+          content: text,
+        }
+        setMessages((prev) => [...prev, assistantMessage])
+        // Save assistant message to IndexedDB
+        saveMessageToDB(assistantMessage, audioUrl || undefined)
 
         // Play TTS audio if available
         if (audioUrl) {
@@ -375,14 +462,13 @@ export default function HomePage() {
       } catch (e) {
         clearInterval(timerInterval)
         // fallback: simple echo for preview when backend is unavailable
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now(),
-            role: 'assistant' as const,
-            content: '（本地回显）' + newMessage.content,
-          },
-        ])
+        const fallbackMessage = {
+          id: Date.now(),
+          role: 'assistant' as const,
+          content: '（本地回显）' + newMessage.content,
+        }
+        setMessages((prev) => [...prev, fallbackMessage])
+        saveMessageToDB(fallbackMessage)
       } finally {
         setIsLoading(false)
         // Keep duration visible for a moment, then reset
@@ -526,6 +612,22 @@ export default function HomePage() {
             )} */}
             <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
               <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setShowHistoryDrawer(true)}
+                  className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                  title="聊天历史"
+                >
+                  <Icon icon="solar:history-bold" className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                  title="新建对话"
+                >
+                  <Icon icon="solar:add-circle-bold" className="w-4 h-4" />
+                </button>
                 <button
                   type="button"
                   disabled={true}
@@ -901,6 +1003,14 @@ export default function HomePage() {
           </Drawer.Content>
         </Drawer.Portal>
       </Drawer.Root>
+
+      {/* Chat History Drawer */}
+      <ChatHistoryDrawer
+        open={showHistoryDrawer}
+        onOpenChange={setShowHistoryDrawer}
+        onSessionSelect={handleSessionSelect}
+        currentSessionId={typeof window !== 'undefined' ? sessionStorage.getItem('alice-session-id') : null}
+      />
     </div>
   )
 }
