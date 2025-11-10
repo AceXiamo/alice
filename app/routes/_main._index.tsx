@@ -61,6 +61,7 @@ export default function HomePage() {
         recognition.lang = 'zh-CN'
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
+          console.log('Speech recognition result:', event)
           const transcript = event.results[0][0].transcript
           setInputValue(transcript)
           setIsListening(false)
