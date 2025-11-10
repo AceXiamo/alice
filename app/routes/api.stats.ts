@@ -26,18 +26,49 @@ export async function loader({ request }: Route.LoaderFunctionArgs) {
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder()
+      let lastSuccessfulSend = Date.now()
+      let isClosed = false
+
+      // 清理函数
+      const cleanup = () => {
+        if (isClosed) return
+        isClosed = true
+        
+        clearInterval(intervalId)
+        clearInterval(healthCheckInterval)
+        concurrentManager.removeConnection(clientId)
+        console.log('[SSE] Connection closed, session:', clientId)
+        
+        try {
+          controller.close()
+        } catch (err) {
+          // 流可能已经关闭，忽略错误
+        }
+      }
 
       // 发送统计数据的函数
       const sendStats = () => {
+        if (isClosed) return
+        
         const stats = concurrentManager.getStats()
         const data = `data: ${JSON.stringify(stats)}\n\n`
         try {
           controller.enqueue(encoder.encode(data))
+          lastSuccessfulSend = Date.now()
         } catch (err) {
-          console.error('SSE send error:', err)
-          clearInterval(intervalId)
+          console.error('[SSE] Send error, closing connection:', err)
+          cleanup()
         }
       }
+
+      // 健康检查：如果超过 10 秒没有成功发送数据，认为连接已断开
+      const healthCheckInterval = setInterval(() => {
+        const timeSinceLastSend = Date.now() - lastSuccessfulSend
+        if (timeSinceLastSend > 10000) {
+          console.warn('[SSE] Health check failed, closing stale connection:', clientId)
+          cleanup()
+        }
+      }, 5000)
 
       // 立即发送一次
       sendStats()
@@ -45,16 +76,10 @@ export async function loader({ request }: Route.LoaderFunctionArgs) {
       // 每 2 秒推送一次统计数据
       const intervalId = setInterval(sendStats, 2000)
 
-      // 处理连接关闭
+      // 处理连接关闭（主要清理方式）
       request.signal.addEventListener('abort', () => {
-        clearInterval(intervalId)
-        concurrentManager.removeConnection(clientId)
-        console.log('[SSE] Connection closed, session:', clientId)
-        try {
-          controller.close()
-        } catch (err) {
-          // 流可能已经关闭，忽略错误
-        }
+        console.log('[SSE] Abort signal received, session:', clientId)
+        cleanup()
       })
     },
   })
@@ -68,3 +93,4 @@ export async function loader({ request }: Route.LoaderFunctionArgs) {
     },
   })
 }
+
