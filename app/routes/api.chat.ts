@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma'
 import sdk from 'microsoft-cognitiveservices-speech-sdk'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { randomUUID } from 'crypto'
+import OpenAI from 'openai'
 
 // =======================
 // System Prompt (editable)
@@ -24,8 +25,14 @@ Keep your replies under 2–3 short sentences unless explicitly asked for a deta
 ` as const
 
 // =======================
-// Vertex AI Config
+// AI Provider Config
 // =======================
+const USE_OPENAI = process.env.USE_OPENAI === 'true'
+const OPENAI_API_ENDPOINT = process.env.API_ENDPOINT || 'https://api.openai.com/v1'
+const OPENAI_API_KEY = process.env.API_KEY || ''
+const OPENAI_MODEL = process.env.MODEL || 'gpt-4o-mini'
+
+// Vertex AI Config (fallback)
 const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 const PROJECT_ID = process.env.VERTEXAI_PROJECT_ID || process.env.GEMINI_PROJECT_ID
 
@@ -48,6 +55,12 @@ const credentials = {
 const groundingTool = {
   googleSearch: {},
 }
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: OPENAI_API_KEY,
+  baseURL: OPENAI_API_ENDPOINT,
+})
 
 // Initialize Vertex AI client
 const genai = new GoogleGenAI({
@@ -117,42 +130,34 @@ export async function action({ request }: Route.ActionFunctionArgs) {
       })
     }
 
-    if (!PROJECT_ID || !credentials.project_id) {
-      return new Response(JSON.stringify({ error: 'missing_vertex_ai_config' }), {
-        status: 500,
-        headers: { 'content-type': 'application/json' },
-      })
-    }
-
-    // Step 1: Generate AI response
-    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [
-      { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
-      { role: 'model', parts: [{ text: "Understood! I'm Alice, ready to help." }] },
-    ]
-
-    // Add conversation history (last 5 messages max)
-    if (history && Array.isArray(history)) {
-      for (const msg of history.slice(-5)) {
-        contents.push({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }],
+    // Validate configuration based on selected provider
+    if (USE_OPENAI) {
+      if (!OPENAI_API_KEY) {
+        return new Response(JSON.stringify({ error: 'missing_openai_api_key' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+    } else {
+      if (!PROJECT_ID || !credentials.project_id) {
+        return new Response(JSON.stringify({ error: 'missing_vertex_ai_config' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
         })
       }
     }
 
-    // Add current user input
-    contents.push({ role: 'user', parts: [{ text: input }] })
-
-    // Generate response with conversation context
-    const response = await genai.models.generateContent({
-      model: MODEL_NAME,
-      contents,
-      config: { temperature: 0.7, tools: [groundingTool] },
-    })
-
-    const text = extractText(response)
-    if (!text) {
-      return new Response(JSON.stringify({ error: 'empty_ai_response' }), {
+    // Step 1: Generate AI response
+    let text: string
+    try {
+      if (USE_OPENAI) {
+        text = await generateOpenAIResponse(input, history)
+      } else {
+        text = await generateGeminiResponse(input, history)
+      }
+    } catch (aiError) {
+      console.error('AI generation error:', aiError)
+      return new Response(JSON.stringify({ error: 'ai_generation_failed' }), {
         status: 502,
         headers: { 'content-type': 'application/json' },
       })
@@ -250,6 +255,84 @@ export async function action({ request }: Route.ActionFunctionArgs) {
     // 确保无论成功或失败都释放槽位
     concurrentManager.releaseSlot()
   }
+}
+
+/**
+ * Generate AI response using OpenAI
+ */
+async function generateOpenAIResponse(
+  input: string,
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>
+): Promise<string> {
+  const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    { role: 'system', content: SYSTEM_PROMPT },
+  ]
+
+  // Add conversation history (last 5 messages max)
+  if (history && Array.isArray(history)) {
+    for (const msg of history.slice(-5)) {
+      messages.push({
+        role: msg.role,
+        content: msg.content,
+      })
+    }
+  }
+
+  // Add current user input
+  messages.push({ role: 'user', content: input })
+
+  const completion = await openai.chat.completions.create({
+    model: OPENAI_MODEL,
+    messages,
+    temperature: 0.7,
+  })
+
+  const text = completion.choices[0]?.message?.content
+  if (!text || !text.trim()) {
+    throw new Error('Empty OpenAI response')
+  }
+
+  return text
+}
+
+/**
+ * Generate AI response using Gemini
+ */
+async function generateGeminiResponse(
+  input: string,
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>
+): Promise<string> {
+  const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [
+    { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
+    { role: 'model', parts: [{ text: "Understood! I'm Alice, ready to help." }] },
+  ]
+
+  // Add conversation history (last 5 messages max)
+  if (history && Array.isArray(history)) {
+    for (const msg of history.slice(-5)) {
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }],
+      })
+    }
+  }
+
+  // Add current user input
+  contents.push({ role: 'user', parts: [{ text: input }] })
+
+  // Generate response with conversation context
+  const response = await genai.models.generateContent({
+    model: MODEL_NAME,
+    contents,
+    config: { temperature: 0.7, tools: [groundingTool] },
+  })
+
+  const text = extractText(response)
+  if (!text) {
+    throw new Error('Empty Gemini response')
+  }
+
+  return text
 }
 
 /**
