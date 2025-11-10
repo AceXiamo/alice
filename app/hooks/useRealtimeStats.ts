@@ -62,9 +62,36 @@ export function useRealtimeStats() {
 
     connect()
 
+    // 页面卸载时主动关闭连接
+    const handleBeforeUnload = () => {
+      if (eventSource) {
+        console.log('[SSE] Page unloading, closing connection')
+        eventSource.close()
+      }
+    }
+
+    // 页面隐藏时也关闭连接（用户切换标签页或最小化窗口）
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && eventSource) {
+        console.log('[SSE] Page hidden, closing connection')
+        eventSource.close()
+        eventSource = null
+      } else if (document.visibilityState === 'visible' && !eventSource) {
+        console.log('[SSE] Page visible, reconnecting')
+        connect()
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     // 清理函数
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      
       if (eventSource) {
+        console.log('[SSE] Component unmounting, closing connection')
         eventSource.close()
       }
     }
