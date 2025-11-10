@@ -2,6 +2,9 @@ import type { Route } from './+types/api.chat'
 import { GoogleGenAI } from '@google/genai'
 import { concurrentManager } from '../lib/concurrent-manager'
 import { prisma } from '../lib/prisma'
+import sdk from 'microsoft-cognitiveservices-speech-sdk'
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { randomUUID } from 'crypto'
 
 // =======================
 // System Prompt (editable)
@@ -57,7 +60,28 @@ const genai = new GoogleGenAI({
 })
 
 // TTS service configuration
-const TTS_SERVICE_URL = 'https://p36vqckz6q7ee5-7865.proxy.runpod.net/tts'
+const USE_AZURE = process.env.USE_AZURE === 'true'
+const TTS_SERVICE_URL = process.env.CUSTOM_TTS || 'https://p36vqckz6q7ee5-7865.proxy.runpod.net/tts'
+const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY || ''
+const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || 'eastasia'
+const AZURE_VOICE_NAME = process.env.AZURE_VOICE_NAME || 'zh-CN-XiaoyiNeural'
+
+// R2 storage configuration
+const R2_ENDPOINT = process.env.R2_ENDPOINT || ''
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || ''
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || ''
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || ''
+const R2_PUBLIC_URL_BASE = process.env.R2_PUBLIC_URL_BASE || ''
+
+// Initialize R2 client
+const r2Client = new S3Client({
+  region: 'auto',
+  endpoint: R2_ENDPOINT,
+  credentials: {
+    accessKeyId: R2_ACCESS_KEY_ID,
+    secretAccessKey: R2_SECRET_ACCESS_KEY,
+  },
+})
 
 export async function action({ request }: Route.ActionFunctionArgs) {
   const startTime = Date.now()
@@ -134,26 +158,30 @@ export async function action({ request }: Route.ActionFunctionArgs) {
       })
     }
 
-    // Step 2: Generate TTS audio
+    // Step 2: Generate TTS audio and upload to R2
     let audioUrl: string | null = null
     try {
-      const ttsRes = await fetch(TTS_SERVICE_URL, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ text }),
-      })
+      let audioBuffer: Buffer
+      let fileExtension: string
 
-      if (ttsRes.ok) {
-        const ttsData = (await ttsRes.json()) as { url?: string }
-        if (ttsData.url) {
-          // Return proxy URL to avoid CORS issues
-          audioUrl = `/api/audio-proxy?url=${encodeURIComponent(ttsData.url)}`
-        }
+      if (USE_AZURE) {
+        // Use Azure TTS
+        audioBuffer = await generateAzureTTS(text)
+        fileExtension = 'mp3'
       } else {
-        console.warn('TTS generation failed:', await ttsRes.text())
+        // Use custom TTS service
+        audioBuffer = await generateCustomTTS(text)
+        // Assume custom TTS returns WAV format (adjust if needed)
+        fileExtension = 'wav'
       }
+
+      // Upload to R2 and get public URL
+      const r2Url = await uploadToR2(audioBuffer, fileExtension)
+      
+      // Return proxy URL to avoid CORS issues
+      audioUrl = `/api/audio-proxy?url=${encodeURIComponent(r2Url)}`
     } catch (ttsError) {
-      console.warn('TTS service error:', ttsError)
+      console.warn('TTS generation or upload error:', ttsError)
     }
 
     // Calculate total duration in seconds
@@ -222,6 +250,100 @@ export async function action({ request }: Route.ActionFunctionArgs) {
     // 确保无论成功或失败都释放槽位
     concurrentManager.releaseSlot()
   }
+}
+
+/**
+ * Upload audio buffer to R2 storage
+ */
+async function uploadToR2(audioBuffer: Buffer, fileExtension: string): Promise<string> {
+  const fileName = `${randomUUID()}.${fileExtension}`
+  const key = `audio/${fileName}`
+
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+      Body: audioBuffer,
+      ContentType: fileExtension === 'mp3' ? 'audio/mpeg' : 'audio/wav',
+    })
+  )
+
+  return `${R2_PUBLIC_URL_BASE}/${key}`
+}
+
+function buildCheerfulSSML(text: string, voiceName: string) {
+  return `
+  <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+         xmlns:mstts='https://www.w3.org/2001/mstts'
+         xml:lang='zh-CN'>
+    <voice name='${voiceName}'>
+      <mstts:express-as style='cheerful' styledegree='1.0'>
+        <prosody rate='1.05' pitch='+2Hz'>
+          ${text}
+        </prosody>
+      </mstts:express-as>
+    </voice>
+  </speak>`
+}
+
+/**
+ * Generate TTS using Azure Speech Service
+ */
+async function generateAzureTTS(text: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const speechConfig = sdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION)
+    speechConfig.speechSynthesisVoiceName = AZURE_VOICE_NAME
+    speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio48Khz192KBitRateMonoMp3
+
+    const synthesizer = new sdk.SpeechSynthesizer(speechConfig, undefined)
+
+    synthesizer.speakSsmlAsync(
+      buildCheerfulSSML(text, AZURE_VOICE_NAME),
+      (result) => {
+        if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+          const audioData = result.audioData
+          synthesizer.close()
+          resolve(Buffer.from(audioData))
+        } else {
+          synthesizer.close()
+          reject(new Error(`Azure TTS failed: ${result.errorDetails}`))
+        }
+      },
+      (err) => {
+        synthesizer.close()
+        reject(new Error(`Azure TTS SDK error: ${err}`))
+      }
+    )
+  })
+}
+
+/**
+ * Generate TTS using custom TTS service
+ */
+async function generateCustomTTS(text: string): Promise<Buffer> {
+  const ttsRes = await fetch(TTS_SERVICE_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+
+  if (!ttsRes.ok) {
+    throw new Error(`Custom TTS failed: ${await ttsRes.text()}`)
+  }
+
+  const ttsData = (await ttsRes.json()) as { url?: string }
+  if (!ttsData.url) {
+    throw new Error('Custom TTS did not return audio URL')
+  }
+
+  // Download the audio from the custom TTS service
+  const audioRes = await fetch(ttsData.url)
+  if (!audioRes.ok) {
+    throw new Error('Failed to download audio from custom TTS')
+  }
+
+  const arrayBuffer = await audioRes.arrayBuffer()
+  return Buffer.from(arrayBuffer)
 }
 
 function extractText(resp: any): string | null {

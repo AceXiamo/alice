@@ -20,7 +20,25 @@ export async function loader({ request }: Route.LoaderFunctionArgs) {
     try {
       const parsedUrl = new URL(audioUrl)
       // Only allow specific domains for security
-      const allowedDomains = ['axm-dev.acexiamo.com', '70uoabtdcq08ye-7865.proxy.runpod.net', 'fii0brhpejciqj-8188.proxy.runpod.net']
+      const allowedDomains = [
+        'axm-dev.acexiamo.com', 
+        '70uoabtdcq08ye-7865.proxy.runpod.net', 
+        'fii0brhpejciqj-8188.proxy.runpod.net'
+      ]
+      
+      // Also allow R2 domain from environment variable
+      const r2PublicUrl = process.env.R2_PUBLIC_URL_BASE
+      if (r2PublicUrl) {
+        try {
+          const r2Domain = new URL(r2PublicUrl).hostname
+          if (r2Domain) {
+            allowedDomains.push(r2Domain)
+          }
+        } catch {
+          // Ignore invalid R2_PUBLIC_URL_BASE
+        }
+      }
+      
       if (!allowedDomains.some(domain => parsedUrl.hostname === domain)) {
         return new Response('Invalid audio URL domain', { status: 403 })
       }
