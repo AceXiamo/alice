@@ -527,7 +527,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="w-full h-full flex">
+    <div className="w-full h-full flex gap-2">
       {/* Chat History Sidebar */}
       <AnimatePresence mode="wait">
         {showHistorySidebar && (
@@ -547,7 +547,7 @@ export default function HomePage() {
       </AnimatePresence>
 
       {/* chat */}
-      <div className="h-full flex-1 relative bg-linear-to-br from-gray-100 via-white to-gray-100 dark:bg-linear-to-br dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden">
+      <div className="h-full flex-1 rounded-lg relative bg-linear-to-br from-gray-100 via-white to-gray-100 dark:bg-linear-to-br dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden">
         {/* 主显示：粒子球（3D 大圆球），全屏覆盖；音波由 TTS 音频驱动 */}
         <div className="absolute inset-0">
           <ParticleSphere className="absolute inset-0 translate-y-[-150px] pointer-events-none" audioRef={ttsAudioRef} />
