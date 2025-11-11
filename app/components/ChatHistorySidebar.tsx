@@ -143,6 +143,24 @@ export function ChatHistorySidebar({ onSessionSelect, currentSessionId, onNewCha
           </div>
         )}
       </div>
+
+      {/* Footer Tips */}
+      <div className="p-3 border-t border-gray-200/60 dark:border-gray-800/60">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 font-mono">
+              <span className="text-gray-600 dark:text-gray-300">{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}</span>
+              <span>+</span>
+              <span className="text-gray-600 dark:text-gray-300">.</span>
+            </div>
+            <span>切换历史记录</span>
+          </div>
+          <div className="flex items-start gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+            <Icon icon="solar:info-circle-bold" className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <p className="leading-relaxed">历史记录保存在浏览器中，清除浏览器数据将丢失记录</p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

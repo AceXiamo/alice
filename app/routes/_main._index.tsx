@@ -785,6 +785,20 @@ export default function HomePage() {
                 <Icon icon="solar:add-circle-bold" className="w-3 h-3" />
                 <span>添加</span>
               </button>
+              <div className="flex-1" />
+              <button
+                type="button"
+                onClick={() => setShowHistorySidebar((prev) => !prev)}
+                className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-[10px] font-medium transition-all ${
+                  showHistorySidebar
+                    ? 'border-blue-400 text-blue-600 bg-blue-50 dark:border-blue-500/60 dark:text-blue-300 dark:bg-blue-900/20'
+                    : 'border-gray-200/70 text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-500'
+                }`}
+                title={`${showHistorySidebar ? '关闭' : '打开'}历史记录 (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+.)`}
+              >
+                <Icon icon={showHistorySidebar ? 'solar:sidebar-minimalistic-bold' : 'solar:history-bold'} className="w-3 h-3" />
+                <span>{showHistorySidebar ? '收起' : '历史'}</span>
+              </button>
             </div>
           </div>
         </div>
