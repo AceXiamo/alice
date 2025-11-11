@@ -619,52 +619,54 @@ export default function HomePage() {
   if (isMobile) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-        <div className="max-w-md mx-auto px-6 text-center">
+        <div className="max-w-sm mx-auto px-6 text-center">
           {/* Icon */}
-          <div className="mb-8 flex justify-center">
-            <div className="relative">
-              <div className="w-32 h-32 rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-800/50">
-                <Icon icon="ph:desktop-thin" className="w-16 h-16 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-lg">
-                <Icon icon="ph:x-thin" className="w-6 h-6 text-white" strokeWidth={2} />
-              </div>
+          <div className="mb-5 flex justify-center">
+            <div className="relative inline-flex">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Monitor */}
+                <rect x="8" y="12" width="48" height="32" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 dark:text-gray-600" />
+                <line x1="32" y1="44" x2="32" y2="52" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 dark:text-gray-600" />
+                <line x1="20" y1="52" x2="44" y2="52" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 dark:text-gray-600" />
+                {/* X mark */}
+                <circle cx="48" cy="16" r="10" className="fill-red-500" />
+                <line x1="44" y1="12" x2="52" y2="20" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                <line x1="52" y1="12" x2="44" y2="20" stroke="white" strokeWidth="2" strokeLinecap="round" />
+              </svg>
             </div>
           </div>
 
           {/* Title */}
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
             需要使用 PC 进行访问
           </h1>
 
           {/* Description */}
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
-            Alice 目前仅支持桌面端访问，以提供最佳的使用体验。
-            <br />
-            请使用电脑浏览器访问本站。
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-5 leading-relaxed">
+            Alice 目前仅支持桌面端访问，以提供最佳的使用体验。请使用电脑浏览器访问本站。
           </p>
 
           {/* Info Box */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-2xl p-4 border border-blue-100 dark:border-blue-800/30 mb-6">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 dark:bg-blue-400/10 flex items-center justify-center shrink-0">
-                <Icon icon="ph:info-thin" className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-xl p-3 border border-blue-100 dark:border-blue-800/30 mb-4">
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-lg bg-blue-500/10 dark:bg-blue-400/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Icon icon="lucide:info" className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="text-left flex-1">
-                <p className="text-xs font-medium text-blue-900 dark:text-blue-300 mb-2">
+                <p className="text-[10px] font-medium text-blue-900 dark:text-blue-300 mb-1.5">
                   推荐使用环境
                 </p>
-                <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1.5">
-                  <li className="flex items-center gap-2">
-                    <div className="w-1 h-1 rounded-full bg-blue-500/50" />
+                <ul className="text-[10px] text-blue-700 dark:text-blue-400 space-y-1">
+                  <li className="flex items-center gap-1.5">
+                    <div className="w-0.5 h-0.5 rounded-full bg-blue-500/50" />
                     <span>Chrome / Edge / Safari 浏览器</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1 h-1 rounded-full bg-blue-500/50" />
+                  <li className="flex items-center gap-1.5">
+                    <div className="w-0.5 h-0.5 rounded-full bg-blue-500/50" />
                     <span>屏幕分辨率 ≥ 1280x720</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-1 h-1 rounded-full bg-blue-500/50" />
+                  <li className="flex items-center gap-1.5">
+                    <div className="w-0.5 h-0.5 rounded-full bg-blue-500/50" />
                     <span>支持语音输入功能</span>
                   </li>
                 </ul>
@@ -676,9 +678,9 @@ export default function HomePage() {
           {siteDescription && (
             <button
               onClick={() => setShowDescriptionDrawer(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-medium rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-medium rounded-lg transition-all shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/25"
             >
-              <Icon icon="ph:book-open-text-thin" className="w-4 h-4" />
+              <Icon icon="lucide:book-open" className="w-3.5 h-3.5" />
               <span>说明</span>
             </button>
           )}
@@ -694,7 +696,7 @@ export default function HomePage() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
-                      <Icon icon="ph:book-open-text-thin" className="h-5 w-5" />
+                      <Icon icon="lucide:book-open" className="h-5 w-5" />
                     </span>
                     <div>
                       <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">网站说明</h3>
@@ -706,7 +708,7 @@ export default function HomePage() {
                     onClick={() => setShowDescriptionDrawer(false)}
                     className="p-2 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
                   >
-                    <Icon icon="ph:x-thin" className="h-5 w-5" />
+                    <Icon icon="lucide:x" className="h-5 w-5" />
                   </button>
                 </div>
 
@@ -731,7 +733,7 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                    <Icon icon="ph:book-open-text-thin" className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                    <Icon icon="lucide:book-open" className="w-16 h-16 mx-auto mb-3 opacity-30" />
                     <p>暂无网站描述</p>
                   </div>
                 )}
