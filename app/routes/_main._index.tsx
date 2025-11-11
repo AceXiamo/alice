@@ -1116,11 +1116,11 @@ export default function HomePage() {
                 </div>
 
                 {discussionGroupsUrl ? (
-                  <div className="flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                  <div className="flex items-center justify-center p-6">
                     <img
                       src={discussionGroupsUrl}
                       alt="Discussion Groups"
-                      className="max-w-full max-h-[60vh] rounded-lg shadow-lg object-contain"
+                      className="mh-[300px] w-[300px] object-contain"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none'
                         const errorDiv = document.createElement('div')
