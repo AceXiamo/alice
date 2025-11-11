@@ -583,7 +583,7 @@ export default function HomePage() {
                       key={msg.id}
                       initial={{ opacity: 0, y: 20, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                      exit={{ opacity: 0, y: 20, scale: 0.95 }}
                       transition={{ duration: 0.3, ease: 'easeOut' }}
                       layout
                       className="max-w-full"
