@@ -110,11 +110,3 @@ export function parseJsonConfig<T = any>(config: Configuration | null): T | null
     return null;
   }
 }
-
-/**
- * Helper to get discussion groups as an array of URLs
- */
-export function getDiscussionGroups(config: Configuration | null): string[] {
-  const data = parseJsonConfig<string[]>(config);
-  return Array.isArray(data) ? data : [];
-}

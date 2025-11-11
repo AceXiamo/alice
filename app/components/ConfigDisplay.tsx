@@ -4,7 +4,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
-import { fetchConfiguration, CONFIG_KEYS, getDiscussionGroups } from '../lib/config';
+import { fetchConfiguration, CONFIG_KEYS } from '../lib/config';
 import type { Configuration } from '../lib/config';
 
 interface ConfigDisplayProps {
@@ -47,7 +47,7 @@ export function MarkdownConfig({ configKey, fallback }: ConfigDisplayProps) {
 }
 
 /**
- * Display discussion groups as a list of links
+ * Display discussion groups as an image (QR code or info graphic)
  */
 export function DiscussionGroups({ fallback }: Omit<ConfigDisplayProps, 'configKey'>) {
   const [config, setConfig] = useState<Configuration | null>(null);
@@ -69,31 +69,20 @@ export function DiscussionGroups({ fallback }: Omit<ConfigDisplayProps, 'configK
     );
   }
 
-  const groups = getDiscussionGroups(config);
-
-  if (groups.length === 0) {
+  if (!config || config.type !== 'url') {
     return <>{fallback}</>;
   }
 
   return (
     <div className="space-y-2">
       <h3 className="text-lg font-semibold">Discussion Groups</h3>
-      <ul className="space-y-2">
-        {groups.map((url, index) => (
-          <li key={index}>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:underline"
-            >
-              <Icon icon="mdi:link-variant" className="w-4 h-4" />
-              <span>{extractDomain(url)}</span>
-              <Icon icon="mdi:open-in-new" className="w-3 h-3" />
-            </a>
-          </li>
-        ))}
-      </ul>
+      <div className="flex items-center justify-center">
+        <img
+          src={config.value}
+          alt="Discussion Groups"
+          className="max-w-full rounded-lg shadow-md"
+        />
+      </div>
     </div>
   );
 }

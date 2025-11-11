@@ -46,7 +46,7 @@ Navigate to `/admin/config` in your browser to access the configuration manageme
 
 The system includes predefined keys for common configurations:
 
-- `discussion_groups`: Array of discussion group URLs (JSON type)
+- `discussion_groups`: Discussion group image URL (URL type) - displays as an image in the UI
 - `site_description`: Site description text (Markdown type)
 - `site_logo`: Logo image URL (URL type)
 - `footer_text`: Footer text (Text or Markdown type)
@@ -229,13 +229,12 @@ Structured data (arrays, objects):
 1. Navigate to `/admin/config`
 2. Fill in the form:
    - **Key**: `discussion_groups`
-   - **Type**: `JSON`
-   - **Value**:
-     ```json
-     ["https://discord.gg/alice", "https://forum.alice.ai", "https://reddit.com/r/alice"]
-     ```
-   - **Description**: Community discussion platforms
+   - **Type**: `URL`
+   - **Value**: `https://example.com/discussion-groups-qr.png`
+   - **Description**: Discussion groups QR code or image
 3. Click "Add Configuration"
+
+The discussion groups image will be displayed when users click the "讨论组" button in the main interface.
 
 ### Adding Site Description
 
