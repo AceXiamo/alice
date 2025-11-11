@@ -649,7 +649,7 @@ export default function HomePage() {
                         ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
-                    title={`${showHistorySidebar ? '关闭' : '打开'}历史记录 (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+.)`}
+                    title={`${showHistorySidebar ? '关闭' : '打开'}历史记录 (${typeof navigator !== 'undefined' && navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+.)`}
                   >
                     <Icon icon="solar:history-bold" className="w-4 h-4" />
                   </button>
