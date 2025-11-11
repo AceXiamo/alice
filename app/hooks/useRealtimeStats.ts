@@ -62,18 +62,44 @@ export function useRealtimeStats() {
 
     connect()
 
-    // 页面卸载时主动关闭连接
+    // 页面卸载时主动关闭连接（桌面浏览器）
     const handleBeforeUnload = () => {
       if (eventSource) {
-        console.log('[SSE] Page unloading, closing connection')
+        console.log('[SSE] Page unloading (beforeunload), closing connection')
         eventSource.close()
+      }
+    }
+
+    // pagehide 事件：移动端更可靠的卸载事件
+    const handlePageHide = () => {
+      if (eventSource) {
+        console.log('[SSE] Page hiding (pagehide), closing connection')
+        eventSource.close()
+        eventSource = null
+      }
+    }
+
+    // freeze 事件：Page Lifecycle API，移动端浏览器冻结页面时触发
+    const handleFreeze = () => {
+      if (eventSource) {
+        console.log('[SSE] Page freezing, closing connection')
+        eventSource.close()
+        eventSource = null
+      }
+    }
+
+    // resume 事件：页面从冻结恢复时重连
+    const handleResume = () => {
+      if (!eventSource) {
+        console.log('[SSE] Page resuming, reconnecting')
+        connect()
       }
     }
 
     // 页面隐藏时也关闭连接（用户切换标签页或最小化窗口）
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && eventSource) {
-        console.log('[SSE] Page hidden, closing connection')
+        console.log('[SSE] Page hidden (visibilitychange), closing connection')
         eventSource.close()
         eventSource = null
       } else if (document.visibilityState === 'visible' && !eventSource) {
@@ -82,14 +108,21 @@ export function useRealtimeStats() {
       }
     }
 
+    // 注册所有事件监听器
     window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handlePageHide)
+    document.addEventListener('freeze', handleFreeze)
+    document.addEventListener('resume', handleResume)
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     // 清理函数
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handlePageHide)
+      document.removeEventListener('freeze', handleFreeze)
+      document.removeEventListener('resume', handleResume)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      
+
       if (eventSource) {
         console.log('[SSE] Component unmounting, closing connection')
         eventSource.close()
