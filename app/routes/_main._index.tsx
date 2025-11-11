@@ -120,6 +120,27 @@ export default function HomePage() {
   const [discussionGroupsUrl, setDiscussionGroupsUrl] = useState<string | null>(null)
   const [siteDescription, setSiteDescription] = useState<string | null>(null)
 
+  // Mobile device detection
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
+      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
+      return mobileRegex.test(userAgent) || window.innerWidth < 768
+    }
+
+    setIsMobile(checkMobile())
+
+    const handleResize = () => {
+      setIsMobile(checkMobile())
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   // Save providers to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -593,6 +614,112 @@ export default function HomePage() {
       el.removeEventListener('ended', onEnded)
     }
   }, [])
+
+  // Mobile restriction page
+  if (isMobile) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+        <div className="max-w-md mx-auto px-6 text-center">
+          <div className="mb-6 flex justify-center">
+            <div className="relative">
+              <Icon icon="solar:monitor-bold" className="w-24 h-24 text-gray-400 dark:text-gray-600" />
+              <div className="absolute -bottom-2 -right-2 bg-red-500 rounded-full p-2">
+                <Icon icon="solar:close-circle-bold" className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+            需要使用 PC 进行访问
+          </h1>
+
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+            Alice 目前仅支持桌面端访问，以提供最佳的使用体验。
+            <br />
+            请使用电脑浏览器访问本站。
+          </p>
+
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-start gap-3">
+              <Icon icon="solar:info-circle-bold" className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div className="text-left">
+                <p className="text-xs font-medium text-blue-900 dark:text-blue-300 mb-1">
+                  推荐使用环境
+                </p>
+                <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
+                  <li>• Chrome / Edge / Safari 浏览器</li>
+                  <li>• 屏幕分辨率 ≥ 1280x720</li>
+                  <li>• 支持语音输入功能</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {discussionGroupsUrl && (
+            <button
+              onClick={() => setShowDiscussionDrawer(true)}
+              className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Icon icon="solar:users-group-rounded-bold" className="w-4 h-4" />
+              <span>查看讨论组</span>
+            </button>
+          )}
+        </div>
+
+        {/* Discussion Groups Drawer for mobile */}
+        <Drawer.Root open={showDiscussionDrawer} onOpenChange={setShowDiscussionDrawer}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
+            <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-xl rounded-t-3xl bg-white dark:bg-gray-900 outline-none">
+              <div className="mx-auto mt-3 mb-4 h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
+              <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-4 max-h-[80vh]">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300">
+                      <Icon icon="solar:users-group-rounded-bold" className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">讨论组</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">加入我们的社区</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDiscussionDrawer(false)}
+                    className="p-2 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+                  >
+                    <Icon icon="solar:close-circle-bold" className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {discussionGroupsUrl ? (
+                  <div className="flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                    <img
+                      src={discussionGroupsUrl}
+                      alt="Discussion Groups"
+                      className="max-w-full max-h-[60vh] rounded-lg shadow-lg object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                        const errorDiv = document.createElement('div')
+                        errorDiv.className = 'text-red-500 text-sm text-center'
+                        errorDiv.textContent = '图片加载失败'
+                        e.currentTarget.parentElement?.appendChild(errorDiv)
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                    <Icon icon="solar:gallery-bold" className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                    <p>暂无讨论组图片</p>
+                  </div>
+                )}
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full h-full flex">
