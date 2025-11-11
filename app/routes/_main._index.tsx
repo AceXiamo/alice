@@ -111,7 +111,7 @@ export default function HomePage() {
 
   const [showProviderModal, setShowProviderModal] = useState(false)
   const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null)
-  const [showHistorySidebar, setShowHistorySidebar] = useState(true)
+  const [showHistorySidebar, setShowHistorySidebar] = useState(false)
 
   // Save providers to localStorage
   useEffect(() => {
@@ -651,7 +651,7 @@ export default function HomePage() {
                     }`}
                     title={`${showHistorySidebar ? '关闭' : '打开'}历史记录 (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+.)`}
                   >
-                    <Icon icon={showHistorySidebar ? 'solar:sidebar-minimalistic-bold' : 'solar:history-bold'} className="w-4 h-4" />
+                    <Icon icon="solar:history-bold" className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
