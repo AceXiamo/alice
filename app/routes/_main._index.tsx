@@ -6,6 +6,7 @@ import { ParticleSphere } from '../components/ParticleSphere'
 import { Drawer } from 'vaul'
 import { ChatHistorySidebar } from '../components/ChatHistorySidebar'
 import { chatDB } from '../lib/chat-db'
+// import { HeroGrid } from '../components/HeroGrid'
 // import { Meteors } from '../components/meteors'
 
 export function meta({}: Route.MetaArgs) {
@@ -1169,7 +1170,8 @@ export default function HomePage() {
                 </div>
 
                 {siteDescription ? (
-                  <div className="prose prose-sm max-w-none dark:prose-invert text-xs">
+                  <div className='flex flex-col gap-5'>
+                    <div className="prose prose-sm max-w-none dark:prose-invert text-xs">
                     <div
                       className="[&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-1.5 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:mb-1 [&_p]:text-xs [&_p]:leading-relaxed [&_p]:mb-2 [&_strong]:font-semibold [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_ul]:text-xs [&_ol]:text-xs [&_li]:mb-1"
                       dangerouslySetInnerHTML={{
@@ -1186,6 +1188,7 @@ export default function HomePage() {
                           .replace(/<\/h([1-6])><\/p>/gim, '</h$1>'),
                       }}
                     />
+                  </div>
                   </div>
                 ) : (
                   <div className="text-center text-gray-500 dark:text-gray-400 py-8">
