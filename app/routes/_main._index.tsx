@@ -620,54 +620,72 @@ export default function HomePage() {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
         <div className="max-w-md mx-auto px-6 text-center">
-          <div className="mb-6 flex justify-center">
+          {/* Icon */}
+          <div className="mb-8 flex justify-center">
             <div className="relative">
-              <Icon icon="solar:monitor-bold" className="w-24 h-24 text-gray-400 dark:text-gray-600" />
-              <div className="absolute -bottom-2 -right-2 bg-red-500 rounded-full p-2">
-                <Icon icon="solar:close-circle-bold" className="w-6 h-6 text-white" />
+              <div className="w-32 h-32 rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-800/50">
+                <Icon icon="ph:desktop-thin" className="w-16 h-16 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-lg">
+                <Icon icon="ph:x-thin" className="w-6 h-6 text-white" strokeWidth={2} />
               </div>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+          {/* Title */}
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
             需要使用 PC 进行访问
           </h1>
 
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+          {/* Description */}
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
             Alice 目前仅支持桌面端访问，以提供最佳的使用体验。
             <br />
             请使用电脑浏览器访问本站。
           </p>
 
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+          {/* Info Box */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-2xl p-4 border border-blue-100 dark:border-blue-800/30 mb-6">
             <div className="flex items-start gap-3">
-              <Icon icon="solar:info-circle-bold" className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-              <div className="text-left">
-                <p className="text-xs font-medium text-blue-900 dark:text-blue-300 mb-1">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 dark:bg-blue-400/10 flex items-center justify-center shrink-0">
+                <Icon icon="ph:info-thin" className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="text-xs font-medium text-blue-900 dark:text-blue-300 mb-2">
                   推荐使用环境
                 </p>
-                <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
-                  <li>• Chrome / Edge / Safari 浏览器</li>
-                  <li>• 屏幕分辨率 ≥ 1280x720</li>
-                  <li>• 支持语音输入功能</li>
+                <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1.5">
+                  <li className="flex items-center gap-2">
+                    <div className="w-1 h-1 rounded-full bg-blue-500/50" />
+                    <span>Chrome / Edge / Safari 浏览器</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1 h-1 rounded-full bg-blue-500/50" />
+                    <span>屏幕分辨率 ≥ 1280x720</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1 h-1 rounded-full bg-blue-500/50" />
+                    <span>支持语音输入功能</span>
+                  </li>
                 </ul>
               </div>
             </div>
           </div>
 
-          {discussionGroupsUrl && (
+          {/* Description Button */}
+          {siteDescription && (
             <button
-              onClick={() => setShowDiscussionDrawer(true)}
-              className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors"
+              onClick={() => setShowDescriptionDrawer(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-medium rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30"
             >
-              <Icon icon="solar:users-group-rounded-bold" className="w-4 h-4" />
-              <span>查看讨论组</span>
+              <Icon icon="ph:book-open-text-thin" className="w-4 h-4" />
+              <span>说明</span>
             </button>
           )}
         </div>
 
-        {/* Discussion Groups Drawer for mobile */}
-        <Drawer.Root open={showDiscussionDrawer} onOpenChange={setShowDiscussionDrawer}>
+        {/* Site Description Drawer for mobile */}
+        <Drawer.Root open={showDescriptionDrawer} onOpenChange={setShowDescriptionDrawer}>
           <Drawer.Portal>
             <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
             <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-xl rounded-t-3xl bg-white dark:bg-gray-900 outline-none">
@@ -675,42 +693,46 @@ export default function HomePage() {
               <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-4 max-h-[80vh]">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300">
-                      <Icon icon="solar:users-group-rounded-bold" className="h-5 w-5" />
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
+                      <Icon icon="ph:book-open-text-thin" className="h-5 w-5" />
                     </span>
                     <div>
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">讨论组</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">加入我们的社区</p>
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">网站说明</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">关于 Alice</p>
                     </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setShowDiscussionDrawer(false)}
+                    onClick={() => setShowDescriptionDrawer(false)}
                     className="p-2 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
                   >
-                    <Icon icon="solar:close-circle-bold" className="h-5 w-5" />
+                    <Icon icon="ph:x-thin" className="h-5 w-5" />
                   </button>
                 </div>
 
-                {discussionGroupsUrl ? (
-                  <div className="flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                    <img
-                      src={discussionGroupsUrl}
-                      alt="Discussion Groups"
-                      className="max-w-full max-h-[60vh] rounded-lg shadow-lg object-contain"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                        const errorDiv = document.createElement('div')
-                        errorDiv.className = 'text-red-500 text-sm text-center'
-                        errorDiv.textContent = '图片加载失败'
-                        e.currentTarget.parentElement?.appendChild(errorDiv)
+                {siteDescription ? (
+                  <div className="prose prose-sm max-w-none dark:prose-invert text-xs">
+                    <div
+                      className="[&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-1.5 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:mb-1 [&_p]:text-xs [&_p]:leading-relaxed [&_p]:mb-2 [&_strong]:font-semibold [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_ul]:text-xs [&_ol]:text-xs [&_li]:mb-1"
+                      dangerouslySetInnerHTML={{
+                        __html: siteDescription
+                          .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                          .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                          .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                          .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                          .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                          .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+                          .replace(/\n\n/gim, '</p><p>')
+                          .replace(/^(.+)$/gim, '<p>$1</p>')
+                          .replace(/<\/p><p><h/gim, '</p><h')
+                          .replace(/<\/h([1-6])><\/p>/gim, '</h$1>'),
                       }}
                     />
                   </div>
                 ) : (
                   <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                    <Icon icon="solar:gallery-bold" className="w-16 h-16 mx-auto mb-3 opacity-30" />
-                    <p>暂无讨论组图片</p>
+                    <Icon icon="ph:book-open-text-thin" className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                    <p>暂无网站描述</p>
                   </div>
                 )}
               </div>
