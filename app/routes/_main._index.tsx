@@ -573,9 +573,9 @@ export default function HomePage() {
       </div>
 
       {/* chat */}
-      <div className="h-full flex-1 rounded-lg relative bg-linear-to-br from-gray-100 via-white to-gray-100 dark:bg-linear-to-br dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden transition-all duration-300">
+      <div className="h-full flex justify-center items-center flex-1 rounded-lg relative bg-linear-to-br from-gray-100 via-white to-gray-100 dark:bg-linear-to-br dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden transition-all duration-300">
         {/* 主显示：粒子球（3D 大圆球），全屏覆盖；音波由 TTS 音频驱动 */}
-        <div className="absolute inset-0 flex justify-center items-center">
+        <div className="absolute w-screen h-screen m-auto flex justify-center items-center">
           <ParticleSphere className="w-screen h-screen translate-y-[-150px] pointer-events-none" audioRef={ttsAudioRef} />
           <audio ref={ttsAudioRef} className="hidden" />
         </div>
