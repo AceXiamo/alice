@@ -102,37 +102,37 @@ export function ChatHistorySidebar({ onSessionSelect, currentSessionId, onNewCha
             <p className="text-xs mt-1 text-gray-400">开始新对话来创建记录</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <AnimatePresence mode="popLayout">
               {sessions.map((session) => (
                 <motion.div key={session.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
                   <button
                     onClick={() => onSessionSelect(session.id)}
-                    className={`group relative w-full text-left p-2.5 rounded-xl transition-all duration-200 ${
+                    className={`group relative w-full text-left p-2 rounded-lg transition-all duration-200 ${
                       currentSessionId === session.id
                         ? 'bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-950/50 border border-blue-200/60 dark:border-blue-700/60 shadow-sm'
                         : 'bg-white/50 dark:bg-gray-800/30 hover:bg-white dark:hover:bg-gray-800/50 border border-gray-200/40 dark:border-gray-700/40 hover:border-gray-300/60 dark:hover:border-gray-600/60 hover:shadow-md'
                     }`}
                   >
                     {/* Active indicator */}
-                    {currentSessionId === session.id && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />}
+                    {currentSessionId === session.id && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />}
 
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {currentSessionId === session.id && <span className="shrink-0 w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50 animate-pulse" />}
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{formatDate(session.updatedAt)}</p>
+                    <div className="flex items-start justify-between gap-1.5 mb-0.5">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        {currentSessionId === session.id && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50 animate-pulse" />}
+                        <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 truncate">{formatDate(session.updatedAt)}</p>
                       </div>
                       <button
                         onClick={(e) => handleDeleteSession(session.id, e)}
-                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-all duration-200"
+                        className="shrink-0 opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-all duration-200"
                         title="删除会话"
                       >
-                        <Icon icon="solar:trash-bin-trash-bold" className="w-3.5 h-3.5" />
+                        <Icon icon="solar:trash-bin-trash-bold" className="w-3 h-3" />
                       </button>
                     </div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 mb-1 leading-relaxed">{session.lastMessage || '空会话'}</p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                      <Icon icon="solar:chat-line-bold" className="w-3.5 h-3.5" />
+                    <p className="text-[13px] font-medium text-gray-900 dark:text-gray-100 line-clamp-2 mb-0.5 leading-snug">{session.lastMessage || '空会话'}</p>
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                      <Icon icon="solar:chat-line-bold" className="w-3 h-3" />
                       <span>{session.messageCount} 条消息</span>
                     </div>
                   </button>
