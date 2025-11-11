@@ -8,16 +8,17 @@ interface ChatHistorySidebarProps {
   onSessionSelect: (sessionId: string) => void
   currentSessionId: string | null
   onNewChat: () => void
+  refreshTrigger?: number
 }
 
-export function ChatHistorySidebar({ onSessionSelect, currentSessionId, onNewChat }: ChatHistorySidebarProps) {
+export function ChatHistorySidebar({ onSessionSelect, currentSessionId, onNewChat, refreshTrigger }: ChatHistorySidebarProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  // Load sessions on mount
+  // Load sessions on mount and when refreshTrigger changes
   useEffect(() => {
     loadSessions()
-  }, [])
+  }, [refreshTrigger])
 
   const loadSessions = async () => {
     if (typeof window === 'undefined') return

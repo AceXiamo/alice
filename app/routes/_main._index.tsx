@@ -46,6 +46,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [loadingDuration, setLoadingDuration] = useState<number>(0)
   const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false)
+  const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0)
   const ttsAudioRef = useRef<HTMLAudioElement>(null)
   const [audioFileName, setAudioFileName] = useState<string | null>(null)
   const [audioProgress, setAudioProgress] = useState(0) // 0..1
@@ -185,6 +186,9 @@ export default function HomePage() {
         audioUrl,
         createdAt: Date.now(),
       })
+
+      // Trigger history sidebar refresh
+      setHistoryRefreshTrigger((prev) => prev + 1)
     } catch (error) {
       console.error('Failed to save message to IndexedDB:', error)
     }
@@ -560,7 +564,12 @@ export default function HomePage() {
       <div
         className={`transition-width duration-300 ${showHistorySidebar ? 'mr-2 w-[256px]' : 'mr-0 w-0'}`}
       >
-        <ChatHistorySidebar onSessionSelect={handleSessionSelect} currentSessionId={typeof window !== 'undefined' ? sessionStorage.getItem('alice-session-id') : null} onNewChat={handleNewChat} />
+        <ChatHistorySidebar
+          onSessionSelect={handleSessionSelect}
+          currentSessionId={typeof window !== 'undefined' ? sessionStorage.getItem('alice-session-id') : null}
+          onNewChat={handleNewChat}
+          refreshTrigger={historyRefreshTrigger}
+        />
       </div>
 
       {/* chat */}
