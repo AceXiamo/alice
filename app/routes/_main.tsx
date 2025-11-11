@@ -93,7 +93,7 @@ export default function MainLayout() {
         </header>
 
         {/* Main Content - 对话区域 */}
-        <main className="flex-1 overflow-hidden rounded-lg">
+        <main className="flex-1 overflow-hidden">
           <Outlet />
         </main>
       </div>
