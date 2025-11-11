@@ -120,6 +120,27 @@ export default function HomePage() {
   const [discussionGroupsUrl, setDiscussionGroupsUrl] = useState<string | null>(null)
   const [siteDescription, setSiteDescription] = useState<string | null>(null)
 
+  // Mobile device detection
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
+      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
+      return mobileRegex.test(userAgent) || window.innerWidth < 768
+    }
+
+    setIsMobile(checkMobile())
+
+    const handleResize = () => {
+      setIsMobile(checkMobile())
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   // Save providers to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -593,6 +614,136 @@ export default function HomePage() {
       el.removeEventListener('ended', onEnded)
     }
   }, [])
+
+  // Mobile restriction page
+  if (isMobile) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+        <div className="max-w-sm mx-auto px-6 text-center">
+          {/* Icon */}
+          <div className="mb-5 flex justify-center">
+            <div className="relative inline-flex">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Monitor */}
+                <rect x="8" y="12" width="48" height="32" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 dark:text-gray-600" />
+                <line x1="32" y1="44" x2="32" y2="52" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 dark:text-gray-600" />
+                <line x1="20" y1="52" x2="44" y2="52" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 dark:text-gray-600" />
+                {/* X mark */}
+                <circle cx="48" cy="16" r="10" className="fill-red-500" />
+                <line x1="44" y1="12" x2="52" y2="20" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                <line x1="52" y1="12" x2="44" y2="20" stroke="white" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            需要使用 PC 进行访问
+          </h1>
+
+          {/* Description */}
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-5 leading-relaxed">
+            Alice 目前仅支持桌面端访问，以提供最佳的使用体验。请使用电脑浏览器访问本站。
+          </p>
+
+          {/* Info Box */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-xl p-3 border border-blue-100 dark:border-blue-800/30 mb-4">
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-lg bg-blue-500/10 dark:bg-blue-400/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Icon icon="lucide:info" className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="text-[10px] font-medium text-blue-900 dark:text-blue-300 mb-1.5">
+                  推荐使用环境
+                </p>
+                <ul className="text-[10px] text-blue-700 dark:text-blue-400 space-y-1">
+                  <li className="flex items-center gap-1.5">
+                    <div className="w-0.5 h-0.5 rounded-full bg-blue-500/50" />
+                    <span>Chrome / Edge / Safari 浏览器</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <div className="w-0.5 h-0.5 rounded-full bg-blue-500/50" />
+                    <span>屏幕分辨率 ≥ 1280x720</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <div className="w-0.5 h-0.5 rounded-full bg-blue-500/50" />
+                    <span>支持语音输入功能</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Description Button */}
+          {siteDescription && (
+            <button
+              onClick={() => setShowDescriptionDrawer(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-medium rounded-lg transition-all shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/25"
+            >
+              <Icon icon="lucide:book-open" className="w-3.5 h-3.5" />
+              <span>说明</span>
+            </button>
+          )}
+        </div>
+
+        {/* Site Description Drawer for mobile */}
+        <Drawer.Root open={showDescriptionDrawer} onOpenChange={setShowDescriptionDrawer}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
+            <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-xl rounded-t-3xl bg-white dark:bg-gray-900 outline-none">
+              <div className="mx-auto mt-3 mb-4 h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
+              <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-4 max-h-[80vh]">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
+                      <Icon icon="lucide:book-open" className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">网站说明</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">关于 Alice</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDescriptionDrawer(false)}
+                    className="p-2 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+                  >
+                    <Icon icon="lucide:x" className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {siteDescription ? (
+                  <div className="prose prose-sm max-w-none dark:prose-invert text-xs">
+                    <div
+                      className="[&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-1.5 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:mb-1 [&_p]:text-xs [&_p]:leading-relaxed [&_p]:mb-2 [&_strong]:font-semibold [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_ul]:text-xs [&_ol]:text-xs [&_li]:mb-1"
+                      dangerouslySetInnerHTML={{
+                        __html: siteDescription
+                          .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                          .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                          .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                          .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                          .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                          .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+                          .replace(/\n\n/gim, '</p><p>')
+                          .replace(/^(.+)$/gim, '<p>$1</p>')
+                          .replace(/<\/p><p><h/gim, '</p><h')
+                          .replace(/<\/h([1-6])><\/p>/gim, '</h$1>'),
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                    <Icon icon="lucide:book-open" className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                    <p>暂无网站描述</p>
+                  </div>
+                )}
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full h-full flex">
