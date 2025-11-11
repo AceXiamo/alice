@@ -37,3 +37,17 @@ model Message {
   @@index([createdAt])
   @@map("messages")
 }
+
+// 配置模型 - 存储网站配置信息
+model Configuration {
+  id          String   @id @default(cuid())
+  key         String   @unique // 配置键名，如 "discussion_groups", "site_description"
+  value       String   @db.Text // 配置值
+  type        String   // 配置类型: "url", "markdown", "text", "json"
+  description String?  // 配置项描述
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@map("configurations")
+}
