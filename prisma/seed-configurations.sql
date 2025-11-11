@@ -1,14 +1,14 @@
 -- Insert sample configurations for Alice website
 -- Run these SQL statements in your PostgreSQL database
 
--- 1. Discussion Groups (JSON array of URLs)
+-- 1. Discussion Groups (Image URL)
 INSERT INTO "configurations" ("id", "key", "value", "type", "description", "createdAt", "updatedAt")
 VALUES (
   'clr1a2b3c4d5e6f7g8h9i0j1',
   'discussion_groups',
-  '["https://discord.gg/alice", "https://github.com/AceXiamo/alice/discussions", "https://forum.alice.ai"]',
-  'json',
-  'Community discussion platforms and groups',
+  'https://example.com/discussion-groups-qr.png',
+  'url',
+  'Discussion groups QR code or image',
   NOW(),
   NOW()
 );
