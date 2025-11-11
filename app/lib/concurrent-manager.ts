@@ -11,14 +11,54 @@ interface Stats {
 
 class ConcurrentManager {
   private activeConnections = new Set<string>() // 使用 Set 存储唯一连接 ID
+  private heartbeats = new Map<string, number>() // 存储每个连接的最后心跳时间戳
   private concurrent = 0
   private readonly maxConcurrent = 6
+  private readonly heartbeatTimeout = 15000 // 15秒未心跳视为断开
+  private heartbeatCheckInterval: NodeJS.Timeout | null = null
+
+  constructor() {
+    // 启动心跳超时检查（每5秒检查一次）
+    this.startHeartbeatCheck()
+  }
+
+  /**
+   * 启动心跳超时检查
+   */
+  private startHeartbeatCheck(): void {
+    this.heartbeatCheckInterval = setInterval(() => {
+      const now = Date.now()
+      const toRemove: string[] = []
+
+      this.heartbeats.forEach((lastHeartbeat, connectionId) => {
+        if (now - lastHeartbeat > this.heartbeatTimeout) {
+          console.log(`[Heartbeat] Connection timeout: ${connectionId}`)
+          toRemove.push(connectionId)
+        }
+      })
+
+      toRemove.forEach(id => this.removeConnection(id))
+    }, 5000)
+  }
 
   /**
    * 添加在线连接（使用连接 ID 去重）
    */
   addConnection(connectionId: string): void {
     this.activeConnections.add(connectionId)
+    this.heartbeats.set(connectionId, Date.now())
+  }
+
+  /**
+   * 更新连接的心跳时间
+   */
+  updateHeartbeat(connectionId: string): void {
+    if (this.activeConnections.has(connectionId)) {
+      this.heartbeats.set(connectionId, Date.now())
+    } else {
+      // 如果连接不存在，自动添加（兼容性处理）
+      this.addConnection(connectionId)
+    }
   }
 
   /**
@@ -26,6 +66,7 @@ class ConcurrentManager {
    */
   removeConnection(connectionId: string): void {
     this.activeConnections.delete(connectionId)
+    this.heartbeats.delete(connectionId)
   }
 
   /**
