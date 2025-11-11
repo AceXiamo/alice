@@ -41,7 +41,7 @@ export default function MainLayout() {
             <div className="flex items-center gap-2">
               <img src="/logo.png" alt="Alice Logo" className="w-6 h-6" />
               <h1
-                className="text-md font-bold animate-gradient bg-linear-to-r from-emerald-500 via-green-500 to-teal-500 bg-size-[300%_100%] bg-clip-text text-transparent"
+                className="hidden md:block text-md font-bold animate-gradient bg-linear-to-r from-emerald-500 via-green-500 to-teal-500 bg-size-[300%_100%] bg-clip-text text-transparent"
                 style={{ fontFamily: 'var(--font-logo)' }}
               >
                 alice
