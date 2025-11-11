@@ -144,6 +144,18 @@ export default function HomePage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Trigger canvas resize when sidebar toggles
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    // Wait for sidebar transition to complete (300ms), then trigger resize
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event('resize'))
+    }, 320)
+
+    return () => clearTimeout(timer)
+  }, [showHistorySidebar])
+
   // Manage displayed messages for proper exit animations
   useEffect(() => {
     const latestMessages = messages.slice(-5)
