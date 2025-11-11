@@ -555,24 +555,13 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="w-full h-full flex gap-2">
+    <div className="w-full h-full flex">
       {/* Chat History Sidebar */}
-      <AnimatePresence mode="wait">
-        {showHistorySidebar && (
-          <motion.div
-            initial={{ x: -280, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -280, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-          >
-            <ChatHistorySidebar
-              onSessionSelect={handleSessionSelect}
-              currentSessionId={typeof window !== 'undefined' ? sessionStorage.getItem('alice-session-id') : null}
-              onNewChat={handleNewChat}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div
+        className={`transition-width duration-300 ${showHistorySidebar ? 'mr-2 w-[256px]' : 'mr-0 w-0'}`}
+      >
+        <ChatHistorySidebar onSessionSelect={handleSessionSelect} currentSessionId={typeof window !== 'undefined' ? sessionStorage.getItem('alice-session-id') : null} onNewChat={handleNewChat} />
+      </div>
 
       {/* chat */}
       <div className="h-full flex-1 rounded-lg relative bg-linear-to-br from-gray-100 via-white to-gray-100 dark:bg-linear-to-br dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden transition-all duration-300">
