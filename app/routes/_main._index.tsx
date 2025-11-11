@@ -6,6 +6,7 @@ import { ParticleSphere } from '../components/ParticleSphere'
 import { Drawer } from 'vaul'
 import { ChatHistorySidebar } from '../components/ChatHistorySidebar'
 import { chatDB } from '../lib/chat-db'
+// import { HeroGrid } from '../components/HeroGrid'
 // import { Meteors } from '../components/meteors'
 
 export function meta({}: Route.MetaArgs) {
@@ -113,6 +114,12 @@ export default function HomePage() {
   const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null)
   const [showHistorySidebar, setShowHistorySidebar] = useState(false)
 
+  // Configuration drawers
+  const [showDiscussionDrawer, setShowDiscussionDrawer] = useState(false)
+  const [showDescriptionDrawer, setShowDescriptionDrawer] = useState(false)
+  const [discussionGroupsUrl, setDiscussionGroupsUrl] = useState<string | null>(null)
+  const [siteDescription, setSiteDescription] = useState<string | null>(null)
+
   // Save providers to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -142,6 +149,35 @@ export default function HomePage() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Load configurations
+  useEffect(() => {
+    const loadConfigs = async () => {
+      try {
+        // Load discussion groups
+        const discussionRes = await fetch('/api/config?key=discussion_groups')
+        if (discussionRes.ok) {
+          const data = await discussionRes.json()
+          if (data.config) {
+            setDiscussionGroupsUrl(data.config.value)
+          }
+        }
+
+        // Load site description
+        const descRes = await fetch('/api/config?key=site_description')
+        if (descRes.ok) {
+          const data = await descRes.json()
+          if (data.config) {
+            setSiteDescription(data.config.value)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load configurations:', error)
+      }
+    }
+
+    loadConfigs()
   }, [])
 
   // Manage displayed messages for proper exit animations
@@ -797,6 +833,31 @@ export default function HomePage() {
                 <Icon icon="solar:add-circle-bold" className="w-3 h-3" />
                 <span>添加</span>
               </button>
+
+              {/* Divider */}
+              <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+
+              {/* Discussion Groups Button */}
+              {/* <button
+                type="button"
+                onClick={() => setShowDiscussionDrawer(true)}
+                className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-[10px] font-medium transition-colors border-gray-200/70 text-gray-600 hover:border-purple-300 dark:border-gray-700 dark:text-gray-400 dark:hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400"
+                title="讨论组"
+              >
+                <Icon icon="solar:users-group-rounded-bold" className="w-3 h-3" />
+                <span>讨论组</span>
+              </button> */}
+
+              {/* Site Description Button */}
+              <button
+                type="button"
+                onClick={() => setShowDescriptionDrawer(true)}
+                className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-[10px] font-medium transition-colors border-gray-200/70 text-gray-600 hover:border-blue-300 dark:border-gray-700 dark:text-gray-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400"
+                title="网站描述"
+              >
+                <Icon icon="solar:info-circle-bold" className="w-3 h-3" />
+                <span>说明</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1023,6 +1084,118 @@ export default function HomePage() {
                       </button>
                     </div>
                   </>
+                )}
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+
+        {/* Discussion Groups Drawer */}
+        <Drawer.Root open={showDiscussionDrawer} onOpenChange={setShowDiscussionDrawer}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
+            <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-xl rounded-t-3xl bg-white dark:bg-gray-900 outline-none">
+              <div className="mx-auto mt-3 mb-4 h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
+              <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-4 max-h-[80vh]">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300">
+                      <Icon icon="solar:users-group-rounded-bold" className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">讨论组</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">加入我们的社区</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDiscussionDrawer(false)}
+                    className="p-2 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+                  >
+                    <Icon icon="solar:close-circle-bold" className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {discussionGroupsUrl ? (
+                  <div className="flex items-center justify-center p-6">
+                    <img
+                      src={discussionGroupsUrl}
+                      alt="Discussion Groups"
+                      className="mh-[300px] w-[300px] object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                        const errorDiv = document.createElement('div')
+                        errorDiv.className = 'text-red-500 text-sm text-center'
+                        errorDiv.textContent = '图片加载失败'
+                        e.currentTarget.parentElement?.appendChild(errorDiv)
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                    <Icon icon="solar:gallery-bold" className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                    <p>暂无讨论组图片</p>
+                    <p className="text-xs mt-1">请在配置管理中添加</p>
+                  </div>
+                )}
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+
+        {/* Site Description Drawer */}
+        <Drawer.Root open={showDescriptionDrawer} onOpenChange={setShowDescriptionDrawer}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
+            <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-xl rounded-t-3xl bg-white dark:bg-gray-900 outline-none">
+              <div className="mx-auto mt-3 mb-4 h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
+              <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-4 max-h-[80vh]">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
+                      <Icon icon="solar:info-circle-bold" className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">网站说明</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">关于 Alice</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDescriptionDrawer(false)}
+                    className="p-2 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+                  >
+                    <Icon icon="solar:close-circle-bold" className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {siteDescription ? (
+                  <div className='flex flex-col gap-5'>
+                    <div className="prose prose-sm max-w-none dark:prose-invert text-xs">
+                    <div
+                      className="[&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-1.5 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:mb-1 [&_p]:text-xs [&_p]:leading-relaxed [&_p]:mb-2 [&_strong]:font-semibold [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:underline [&_ul]:text-xs [&_ol]:text-xs [&_li]:mb-1"
+                      dangerouslySetInnerHTML={{
+                        __html: siteDescription
+                          .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                          .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                          .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                          .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                          .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                          .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+                          .replace(/\n\n/gim, '</p><p>')
+                          .replace(/^(.+)$/gim, '<p>$1</p>')
+                          .replace(/<\/p><p><h/gim, '</p><h')
+                          .replace(/<\/h([1-6])><\/p>/gim, '</h$1>'),
+                      }}
+                    />
+                  </div>
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                    <Icon icon="solar:document-text-bold" className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                    <p>暂无网站描述</p>
+                    <p className="text-xs mt-1">请在配置管理中添加</p>
+                  </div>
                 )}
               </div>
             </Drawer.Content>
