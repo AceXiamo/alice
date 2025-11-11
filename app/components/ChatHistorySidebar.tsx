@@ -91,16 +91,16 @@ export function ChatHistorySidebar({ onSessionSelect, currentSessionId, onNewCha
       {/* Sessions List */}
       <div className="flex-1 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
         {isLoading && sessions.length === 0 ? (
-          <div className="flex items-center justify-center h-32">
-            <Icon icon="svg-spinners:3-dots-fade" className="w-8 h-8 text-blue-500" />
+          <div className="flex items-center justify-center h-full">
+            <Icon icon="svg-spinners:3-dots-fade" className="w-6 h-6 text-blue-500" />
           </div>
         ) : sessions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-gray-400 dark:text-gray-500 text-center px-4">
-            <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
-              <Icon icon="solar:inbox-line-bold" className="w-8 h-8" />
+          <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 text-center px-4">
+            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-2">
+              <Icon icon="solar:chat-round-dots-bold" className="w-6 h-6" />
             </div>
-            <p className="text-sm font-medium">暂无聊天记录</p>
-            <p className="text-xs mt-1 text-gray-400">开始新对话来创建记录</p>
+            <p className="text-xs font-medium">暂无聊天记录</p>
+            <p className="text-[11px] mt-1 text-gray-400">开始新对话来创建记录</p>
           </div>
         ) : (
           <div className="space-y-1.5">
