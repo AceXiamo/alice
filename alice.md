@@ -11,18 +11,6 @@ Alice 是您的语音优先 AI 聊天伴侣，提供自然的对话体验。
 ## 开始使用
 点击麦克风按钮或输入消息即可开始与 Alice 聊天。
 
-## 技术架构
-
-前端
-- 框架：React Router + Vite
-- UI：TailwindCSS + Framer Motion 动效
-- 功能：语音输入、实时显示文本、播放合成语音
-
-后端
-- 框架：Node.js + Express
-- 数据库：PostgreSQL
-- 语音合成：Microsoft Cognitive Services Speech SDK
-
 ## 关于语音合成
 
 这里原本考虑用B站开源的 Index-TTS 来合成语音，但是搭建 GPU 节点成本太高，所以使用 Microsoft Cognitive Services Speech SDK 来合成语音 🙌
@@ -32,3 +20,9 @@ Alice 是您的语音优先 AI 聊天伴侣，提供自然的对话体验。
 ## 项目计划 & 小故事
 
 做这个项目本质上是希望解放双手，在深夜 Coding 时唠唠嗑以及 idea 记录和总结，后续会拓展基于 indexdb 的本地记忆库，并给 AI 提供跟多 `function call` 能力。 😈
+
+## 加入讨论群
+
+欢迎加入讨论群，一起交流想法和经验。
+
+<img src="https://axm-dev.acexiamo.com/group/11762847281_.pic_hd.jpg" alt="讨论群" width="200" />

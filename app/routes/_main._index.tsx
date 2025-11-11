@@ -838,7 +838,7 @@ export default function HomePage() {
               <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
 
               {/* Discussion Groups Button */}
-              <button
+              {/* <button
                 type="button"
                 onClick={() => setShowDiscussionDrawer(true)}
                 className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-[10px] font-medium transition-colors border-gray-200/70 text-gray-600 hover:border-purple-300 dark:border-gray-700 dark:text-gray-400 dark:hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400"
@@ -846,7 +846,7 @@ export default function HomePage() {
               >
                 <Icon icon="solar:users-group-rounded-bold" className="w-3 h-3" />
                 <span>讨论组</span>
-              </button>
+              </button> */}
 
               {/* Site Description Button */}
               <button
