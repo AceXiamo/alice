@@ -52,18 +52,17 @@ const PROJECT_ID = process.env.VERTEXAI_PROJECT_ID || process.env.GEMINI_PROJECT
 
 // Build credentials from environment variables
 const credentials = {
-  type: 'service_account',
-  project_id: '***REMOVED***',
-  private_key_id: '***REMOVED***',
-  private_key:
-    '***REMOVED***',
-  client_email: 'banana@***REMOVED***.iam.gserviceaccount.com',
-  client_id: '***REMOVED***',
-  auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-  token_uri: 'https://oauth2.googleapis.com/token',
-  auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-  client_x509_cert_url: 'https://www.googleapis.com/robot/v1/metadata/x509/banana%40***REMOVED***.iam.gserviceaccount.com',
-  universe_domain: 'googleapis.com',
+  type: process.env.GEMINI_TYPE || '',
+  project_id: process.env.GEMINI_PROJECT_ID || '',
+  private_key_id: process.env.GEMINI_PRIVATE_KEY_ID || '',
+  private_key: process.env.GEMINI_PRIVATE_KEY || '',
+  client_email: process.env.GEMINI_CLIENT_EMAIL || '',
+  client_id: process.env.GEMINI_CLIENT_ID || '',
+  auth_uri: process.env.GEMINI_AUTH_URI || '',
+  token_uri: process.env.GEMINI_TOKEN_URI || '',
+  auth_provider_x509_cert_url: process.env.GEMINI_AUTH_PROVIDER_X509_CERT_URL || '',
+  client_x509_cert_url: process.env.GEMINI_CLIENT_X509_CERT_URL || '',
+  universe_domain: process.env.GEMINI_UNIVERSE_DOMAIN || '',
 }
 
 const groundingTool = {
@@ -79,8 +78,8 @@ const openai = new OpenAI({
 // Initialize Vertex AI client
 const genai = new GoogleGenAI({
   vertexai: true,
-  project: '***REMOVED***',
-  location: 'us-central1',
+  project: PROJECT_ID,
+  location: process.env.VERTEXAI_LOCATION || 'us-central1',
   googleAuthOptions: {
     credentials: credentials,
   },
